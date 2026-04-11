@@ -14,6 +14,7 @@ This project aims to provide a robust and scalable solution for [mention key ben
     *   [Configuration](#configuration)
 *   [Usage](#usage)
 *   [Contributing](#contributing)
+*   [Site Plan](#site-plan)
 *   [License](#license)
 
 ## About Stagea
@@ -95,6 +96,14 @@ Configuration settings are managed through environment variables.
     *   `PORT`: The port your application will run on (e.g., `3000`)
     *   `DATABASE_URL`: Your database connection string (e.g., `postgresql://user:password@host:port/database`)
     *   `[Other relevant environment variables, e.g., API keys, secret keys]`
+
+## Usage
+
+Once the project is built and configured, you can start the development server:
+
+## Site Plan
+
+For a high-level overview of the project's architecture and goals, please refer to the [Site Plan](docs/site-plan.md).
 
 ## Usage
 
