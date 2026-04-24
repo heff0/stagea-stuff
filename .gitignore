@@ -1,0 +1,75 @@
+# --- OS / editor noise -------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# --- Secrets / credentials ---------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+credentials
+credentials.*
+*.credentials
+service-account*.json
+
+# --- Logs / caches / local data ---------------------------------------------
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+.cache/
+tmp/
+.tmp/
+
+# --- Node / pnpm / bundlers (for future apps/ and packages/) -----------------
+node_modules/
+.pnpm-store/
+.npm/
+dist/
+build/
+.next/
+.turbo/
+.nx/
+coverage/
+.eslintcache
+
+# --- Python (for .cursor/skills/compress scripts and future tooling) ---------
+__pycache__/
+*.py[cod]
+.venv/
+.env.venv/
+*.egg-info/
+
+# --- Submodule catch ---------------------------------------------------------
+# The submodules themselves (forum/, wiki/, blog/, shop/) are tracked as
+# gitlinks declared in .gitmodules. Tracked paths are immune to .gitignore,
+# so these rules ONLY kick in if a submodule pointer breaks and its working
+# tree suddenly becomes visible to the parent repo. In that case, `git add .`
+# would otherwise pull tens of thousands of upstream files into this repo.
+# Keep these patterns as a safety net and never `git add --force` around them.
+/forum/**
+/wiki/**
+/blog/**
+/shop/**
+
+# Backups and *.original.md files written by the `compress` skill
+*.original.md
+*.bak
+*.orig

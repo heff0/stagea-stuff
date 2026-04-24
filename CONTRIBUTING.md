@@ -1,79 +1,65 @@
-# Contributing to the Stagea Project
+# Contributing to Stagea
 
-Thank you for your interest in contributing to the Stagea project! We welcome contributions from everyone. This document outlines how you can get involved.
+Thanks for helping build the Stagea community platform. This repo is a monorepo that bundles several upstream applications (NodeBB, MediaWiki, Ghost, Saleor storefront) under a single Stagea-specific layout. These rules cover contributions to **this monorepo only** — for contributions to individual upstream projects, follow their own `CONTRIBUTING.md` and push your change there first.
 
-## 1. How to Contribute
+## 1. Scope of This Repo
 
-We appreciate all types of contributions, including:
+You should change files in this repo when you are:
 
-*   **Code:** Bug fixes, new features, performance improvements.
-*   **Documentation:** Improving existing documentation, writing new guides, tutorials, or API references.
-*   **Testing:** Reporting bugs, writing test cases, helping with quality assurance.
-*   **Design:** UI/UX improvements, mockups, or design feedback.
-*   **Community Support:** Answering questions, helping other users.
+- Adding or updating the glue that wires services together: docs, `.cursor/skills/`, planned `infra/`, planned `packages/`, planned `apps/`, planned `services/`.
+- Bumping the pinned commit of any of the four submodules (`forum/`, `wiki/`, `blog/`, `shop/`) to a newer upstream revision; document the upstream SHA range in the PR.
+- Writing or refining skills under `.cursor/skills/` and updating `skills-lock.json`.
 
-## 2. Getting Started
+You should **not** use this repo to:
 
-### 2.1. Development Setup
+- Fix bugs inside NodeBB, MediaWiki, Ghost, or the Saleor storefront. Those belong upstream; a patch committed directly into a submodule checkout here will be lost on the next bump.
+- Create sibling repositories for Stagea-related code. The `stagea-monorepo` skill enforces that all Stagea work lives under `/Users/Shared/dev/stagea-stuff/` (and its GitHub mirror at `heff0/stagea-stuff`).
 
-To contribute code, you'll need to set up your development environment. Please refer to the `README.md` file for detailed instructions on setting up the project locally.
+## 2. Branching and Commits
 
-### 2.2. Branching Strategy
+- Default branch: `main`. All PRs target `main`. There is no `develop` branch.
+- Branch naming: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`, `infra/<slug>`.
+- Commit messages follow **Conventional Commits**, enforced by the `caveman-commit` skill (see `.cursor/skills/caveman-commit/SKILL.md`):
+  - Subject: `<type>(<scope>): <imperative summary>`, ≤50 chars preferred, hard cap 72.
+  - Body only when the "why" is non-obvious or there's a breaking change.
+  - No AI attribution lines in commit messages.
 
-We follow a simple branching strategy:
+## 3. Pull Requests
 
-*   `main`: The stable, production-ready branch.
-*   `develop`: The integration branch for new features and ongoing development.
-*   Feature branches: Create a new branch for each feature or bug fix (e.g., `feature/user-authentication`, `fix/login-bug`). Base your feature branches off `develop`.
+Every PR must:
 
-### 2.3. Pull Requests (PRs)
+1. Target `main` on `heff0/stagea-stuff`.
+2. Keep the diff to a single concern. Split "bump upstream" and "configure upstream" into separate PRs.
+3. Update the relevant doc in `docs/` in the same PR. If you scaffold `auth/`, update `docs/site-plan.md` §2 and `docs/app_test_plan.md` §2.5. If you change a setup step, update the `README.md`.
+4. For any submodule bump, include the upstream commit range in the PR body: `saleor/storefront be64a69…<new-sha> (N commits)`.
+5. Pass the per-app smoke tests in `docs/app_test_plan.md` for the apps you touched. Paste the `pass/fail` matrix into the PR description.
 
-All contributions should be submitted as Pull Requests to the `develop` branch.
+## 4. Code Style
 
-1.  **Fork the repository** on GitHub.
-2.  **Clone your fork** locally.
-3.  **Create a new branch** for your changes: `git checkout -b feature/your-feature-name`
-4.  **Make your changes** and commit them: `git commit -m "Add new feature"`
-5.  **Push your branch** to your fork: `git push origin feature/your-feature-name`
-6.  **Open a Pull Request** from your fork's branch to the `develop` branch of the main Stagea repository.
+- **Markdown:** wrap at 100 characters where it doesn't harm tables. Use ATX headings (`#`). No trailing spaces.
+- **Shell:** POSIX `sh` for anything in `infra/`; Bash only when you use Bash features, and start with `#!/usr/bin/env bash` plus `set -euo pipefail`.
+- **TypeScript / JavaScript** (once `packages/` and `apps/` exist): match the upstream config where we copy conventions from (Ghost's ESLint for `apps/`, Saleor's config for shop adapters).
+- **PHP** (if you add a custom MediaWiki extension under `wiki/extensions/Stagea*`): follow MediaWiki's `.phpcs.xml` (already present at `wiki/.phpcs.xml`).
 
-Please ensure your PR includes:
+## 5. Reviewing PRs
 
-*   A clear and concise description of the changes.
-*   Any relevant issue numbers it addresses.
-*   Screenshots or GIFs for UI changes, if applicable.
+If you're reviewing, use the `caveman-review` skill style: one line per finding, `L<line>: <problem>. <fix>.`, with severity prefixes `🔴 bug`, `🟡 risk`, `🔵 nit`, `❓ q`. Drop the terse format for security findings and architectural disagreements.
 
-### 2.4. Code Style and Standards
+## 6. Reporting Bugs
 
-*   Follow the existing code style and conventions used throughout the project.
-*   Write clean, readable, and maintainable code.
-*   Add comments where necessary to explain complex logic.
-*   Ensure your code is well-tested.
+Open an issue on `heff0/stagea-stuff`. Include:
 
-## 3. Reporting Bugs
+- Affected path (`forum/`, `wiki/`, `blog/`, `shop/`, `docs/`, `.cursor/skills/`, or `infra/`).
+- Exact command that failed and its output (last 50 lines).
+- Versions: `git --version`, `node -v`, `pnpm -v`, `php -v`, `docker version --format '{{.Server.Version}}'`.
+- Whether it reproduces on a clean `git clone --recurse-submodules`.
 
-If you find a bug, please report it by opening an issue on our GitHub repository. Include as much detail as possible:
+Bugs that reproduce inside an upstream project and not in our glue should be filed upstream; link the upstream issue from ours so we can track it.
 
-*   **Clear Title:** A descriptive title for the bug.
-*   **Steps to Reproduce:** Detailed instructions on how to trigger the bug.
-*   **Expected Behavior:** What you expected to happen.
-*   **Actual Behavior:** What actually happened.
-*   **Environment:** Your operating system, browser (if applicable), and project version.
-*   **Screenshots/Logs:** Any relevant visual aids or error logs.
+## 7. Feature Requests
 
-## 4. Feature Requests
+Open an issue with the label `proposal`. The proposal should say which subdomain / service it targets (from `docs/site-plan.md` §2) and whether it requires any of the still-empty directories (`auth/`, `parts/`, `services/`, `infra/`, `packages/`) to be scaffolded first.
 
-If you have an idea for a new feature, please open an issue to discuss it. This allows us to gather feedback and ensure it aligns with the project's goals.
+## 8. Code of Conduct
 
-## 5. Code of Conduct
-
-We are committed to maintaining a friendly, helpful, and inclusive community. Please adhere to our Code of Conduct, which can be found at [Link to Code of Conduct, if available].
-
-## 6. Questions and Support
-
-If you have any questions or need help, feel free to:
-
-*   Open an issue on GitHub.
-*   Join our community chat/forum [Link to chat/forum, if available].
-
-We look forward to your contributions!
+Be useful, be accurate, be civil. Personal attacks, harassment, and off-topic politics get a single warning and then a block.

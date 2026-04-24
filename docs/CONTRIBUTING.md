@@ -1,64 +1,80 @@
 # Contributing to the Stagea Wiki
 
-Thank you for considering contributing to the Stagea Wiki! We aim to build a comprehensive and valuable knowledge base for Stagea's projects, products, and internal processes. Your contributions are essential to our success.
+This guide is for people editing content on `wiki.stagea-stuff.com` (the MediaWiki instance at `wiki/`). For code and infra changes to this monorepo, see the repo-root [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
-## 1. How to Contribute
+## 1. What You Can Contribute
 
-There are several ways you can contribute:
+- **New pages** for vehicles, parts, procedures, events, or people that are not yet documented.
+- **Edits** to existing pages for accuracy, clarity, missing citations, or outdated part numbers/prices.
+- **Structured data** — filling in the `Template:PartInfobox` / `Template:GenerationInfobox` fields on existing pages (see `docs/wiki_options.md` §4 for the infobox roadmap).
+- **Media** — photos of real cars, parts, and receipts. Upload via `Special:Upload`; see §3.3 for licensing.
+- **Issue reports** for broken links, wrong facts, or pages that should be merged or split.
 
-*   **Create New Pages:** If you identify a gap in our documentation, feel free to create a new page.
-*   **Edit Existing Pages:** Help us improve clarity, accuracy, and completeness by editing existing pages.
-*   **Add Information:** Contribute specific details, examples, code snippets, or references.
-*   **Report Issues:** If you find errors, broken links, or outdated information, please report them.
-*   **Suggest Improvements:** Propose new features, extensions, or ways to organize the wiki.
+## 2. Getting an Account
 
-## 2. Getting Started
+- **Read access** is public and does not require an account.
+- **Edit access** requires an account. Self-registration is enabled; accounts become auto-confirmed after 4 days and 10 edits, at which point you can also create new pages and upload files.
+- **Sysop / interface-admin rights** are granted by the wiki administrator listed in `Project:Administrators` on the wiki itself. Do not request them in this repo's issue tracker.
 
-### 2.1. Access and Permissions
+Once the `auth/` Keycloak service is live (see `docs/site-plan.md` §3), local wiki accounts will be phased out in favour of SSO; existing accounts will be migrated by email address.
 
-*   **Read Access:** All users can view the wiki content.
-*   **Edit Access:** To edit pages, you will need an account. Please contact [Admin Name/Email] to request an account.
-*   **Advanced Permissions:** For creating new page types, managing extensions, or other administrative tasks, please contact [Admin Name/Email].
+## 3. Content Rules
 
-### 2.2. Content Guidelines
+### 3.1 Style
 
-To ensure consistency and quality, please adhere to the following guidelines:
+- **Heading levels:** page title is `H1` (auto-generated). Top-level sections start at `==` (H2). Do not use `=` for section headings inside page body.
+- **Lists:** `*` for unordered, `#` for ordered. Indent sub-items with `**` / `##`; do not mix.
+- **Code:** use `<syntaxhighlight lang="…">` with one of: `bash`, `javascript`, `php`, `python`, `ini`, `yaml`, `diff`, `text`. Raw `<pre>` is only for fixed-width non-code output.
+- **Internal links:** `[[Page Name]]` or `[[Page Name|display text]]`. Do not use full URLs for pages that live on the same wiki.
+- **Units:** metric first, imperial in parentheses where relevant. Nissan part numbers verbatim, no added dashes.
 
-*   **Clarity and Conciseness:** Write clearly and avoid jargon where possible. If technical terms are necessary, provide definitions.
-*   **Accuracy:** Ensure all information is up-to-date and factually correct.
-*   **Neutrality:** Maintain an objective and neutral tone.
-*   **Formatting:**
-    *   Use headings (`== Heading ==`, `=== Subheading ===`) to structure content.
-    *   Use bullet points (`* Item`) and numbered lists (`# Item`) for lists.
-    *   Format code snippets using `<syntaxhighlight lang="language">...</syntaxhighlight>` tags (e.g., `lang="php"`, `lang="javascript"`, `lang="bash"`).
-    *   Link to other wiki pages using `[[Page Name]]`.
-    *   Use templates for recurring content structures (e.g., product specifications, how-to guides). See [[Templates]] for available templates.
-*   **Citations:** For technical details or factual claims, cite your sources using the `{{Cite}}` template or by linking to relevant internal or external documentation.
+### 3.2 Accuracy
 
-### 2.3. Using Templates
+- Cite every factual claim about a car, part, or procedure using `<ref>` and the `{{Cite}}` template. Service-manual citations must include the manual title, publication year, and page or section number.
+- Do not copy paragraphs from forums, Facebook groups, or other wikis. Summarise in your own words, then cite the source.
+- If you cannot verify a claim, mark it with `{{citation needed}}` rather than deleting it.
 
-Templates help maintain a consistent look and feel across the wiki. Before creating a new page for a common type of content (e.g., a product, a how-to guide, an event), check if a template already exists on the [[Templates]] page.
+### 3.3 Media Licensing
 
-### 2.4. Version Control and History
+Uploaded images must be one of:
 
-Every edit you make is recorded in the page history. This allows us to track changes, revert to previous versions if necessary, and see who contributed what.
+- Your own photo, released under CC BY-SA 4.0 (default when you click "own work" at upload).
+- A photo with a compatible free license — CC BY, CC BY-SA, or public domain. Record the source URL and author in the upload summary.
+- An official Nissan technical diagram used under fair dealing / fair use — tag with `{{Fair use}}` and keep the image resolution low.
 
-## 3. Reporting Issues and Suggesting Improvements
+Do not upload screenshots of copyrighted PDFs or paid workshop manuals.
 
-If you find an error or have a suggestion:
+## 4. Templates
 
-*   **For minor corrections (typos, grammatical errors):** Edit the page directly and save your changes.
-*   **For factual errors or outdated information:** Edit the page directly. If you're unsure about the correction, add a note on the page's "Talk" page.
-*   **For broken links:** Edit the page and correct the link, or use the "Report a broken link" feature if available.
-*   **For suggestions on new features or major content changes:** Use the "Talk" page of the relevant section or page, or contact [Admin Name/Email].
+Before creating a new page, check whether a template already covers the content type. As of the current roadmap (`docs/wiki_options.md` §4), the following are planned:
 
-## 4. Code of Conduct
+- `Template:PartInfobox` — single parts (fields: number, name, generation, OEM/aftermarket, price range, supersession).
+- `Template:GenerationInfobox` — WGC34, WGNC34, M35 summary blocks.
+- `Template:Meet` — community events (date, location, host, report link).
+- `Template:Workshop` — specialist workshops (name, address, services, ratings).
+- `Template:HowTo` — step-by-step procedures with required tools and difficulty rating.
+- `Template:TroubleshootingStep` — used inside diagnostic flowcharts.
 
-We expect all contributors to adhere to a respectful and collaborative environment. Please treat fellow contributors with courtesy and professionalism. Harassment or abusive behavior will not be tolerated.
+When a template exists and fits, use it; do not duplicate its fields as freeform prose.
 
-## 5. Contact
+## 5. Version Control
 
-If you have any questions or need assistance, please reach out to:
+Every save writes a new revision. Use the "Summary" field on every edit — minimum useful content is a verb phrase ("fix part number for WGNC34 turbo", "add photo of engine bay"). Revisions can be reverted by sysops; bulk vandalism is handled via `Special:Nuke`.
 
-*   **Wiki Administrator:** [Admin Name/Email]
-*   **General Inquiries:** [General Contact Email/Channel]
+## 6. Reporting Issues
+
+- **Typo or small factual fix:** fix it yourself, no issue needed.
+- **Broken internal link:** fix the link inline.
+- **Broken external link:** replace with archive.org if possible; otherwise comment out with `<!-- -->` and tag the page for attention.
+- **Disputed content or vandalism:** use the page's `Talk:` tab; do not edit-war on the main page.
+- **Extension/infra bug** (e.g. VisualEditor crashes, SSO redirect loop): open an issue on this monorepo with the `wiki` label.
+
+## 7. Code of Conduct
+
+Be useful, be accurate, be civil. Personal attacks, harassment, and off-topic politics get a single warning and then a block. The wiki administrator listed in `Project:Administrators` has final say.
+
+## 8. Contact
+
+- **Day-to-day questions:** post on the relevant page's `Talk:` tab.
+- **Account, permissions, extension requests:** see `Project:Administrators` on the wiki.
+- **Repo- or infra-level issues:** open an issue on this monorepo and tag it `wiki`.

@@ -1,128 +1,215 @@
-# Stagea Project
+# Stagea — Nissan Stagea Community Monorepo
 
-Welcome to the Stagea Project! This repository contains the core components and applications for Stagea, a platform designed to [briefly describe Stagea's main purpose - e.g., streamline project management, facilitate collaboration, manage digital assets, etc.].
+A single-repository bundle of the web services that power the Stagea community platform: a forum, a wiki, a blog, a storefront, an identity provider, and a parts catalogue. Each service is an upstream project pinned here as a Git submodule, wired together by shared infra and packages and kept consistent by the `.cursor/skills/` toolkit.
 
-This project aims to provide a robust and scalable solution for [mention key benefits or target audience].
+Public domains this repo targets:
+
+| Subdomain | Service | Upstream | Status in repo |
+| --- | --- | --- | --- |
+| `forum.stagea-stuff.com` | NodeBB (Node.js + Redis/Mongo/Postgres) | `github.com/NodeBB/NodeBB` | Submodule at `forum/` (tracks `master`, pinned to `ac8bad8`) |
+| `wiki.stagea-stuff.com` | MediaWiki (PHP) | `github.com/wikimedia/mediawiki` | Submodule at `wiki/` (tracks `master`, pinned to `a0a8c14`) |
+| `blog.stagea-stuff.com` | Ghost (Node.js, pnpm + Nx monorepo) | `github.com/TryGhost/Ghost` | Submodule at `blog/` (tracks `main`, pinned to `fe4ef54`) |
+| `shop.stagea-stuff.com` | Saleor Storefront "Paper" (Next.js 16 + GraphQL) | `github.com/saleor/storefront` | Submodule at `shop/` (tracks `main`, pinned to `be64a69`) |
+| `auth.stagea-stuff.com` | Keycloak (OIDC identity provider) | `github.com/keycloak/keycloak` | Directory reserved (`auth/`), not yet populated |
+| `parts.stagea-stuff.com` | Directus-backed parts catalogue | `github.com/directus/directus` | Directory reserved (`parts/`), not yet populated |
 
 ## Table of Contents
 
-*   [About Stagea](#about-stagea)
-*   [Features](#features)
-*   [Installation](#installation)
-    *   [Prerequisites](#prerequisites)
-    *   [Local Setup](#local-setup)
-    *   [Configuration](#configuration)
-*   [Usage](#usage)
-*   [Contributing](#contributing)
-*   [Site Plan](#site-plan)
-*   [License](#license)
+- [Repository Layout](#repository-layout)
+- [What Actually Exists Today](#what-actually-exists-today)
+- [Cursor Skills](#cursor-skills)
+- [Prerequisites](#prerequisites)
+- [Clone & Initialise](#clone--initialise)
+- [Running Each App Locally](#running-each-app-locally)
+- [Updating a Submodule](#updating-a-submodule)
+- [Planned Services](#planned-services)
+- [Docs](#docs)
+- [Contributing](#contributing)
+- [Licensing](#licensing)
 
-## About Stagea
+## Repository Layout
 
-Stagea is a comprehensive platform that [elaborate on the purpose and vision of Stagea. What problem does it solve? What are its core values?]. Our goal is to [mention long-term goals or impact].
-
-## Features
-
-Stagea offers a range of features to support its core purpose, including:
-
-*   **[Feature 1 Name]:** [Brief description of Feature 1]
-*   **[Feature 2 Name]:** [Brief description of Feature 2]
-*   **[Feature 3 Name]:** [Brief description of Feature 3]
-*   **[Feature 4 Name]:** [Brief description of Feature 4]
-*   **[Feature 5 Name]:** [Brief description of Feature 5]
-
-## Installation
-
-This section provides instructions on how to set up Stagea on your local development environment.
-
-### Prerequisites
-
-Before you begin, ensure you have the following installed on your system:
-
-*   **Node.js:** Version [Specify Node.js version, e.g., 18.x or higher]. You can download it from [https://nodejs.org/](https://nodejs.org/).
-*   **npm or Yarn:** Package manager. npm is included with Node.js. Yarn can be installed via `npm install -g yarn`.
-*   **[Other dependencies, e.g., Python, Docker, specific database]:** Version [Specify version].
-*   **[Database specific setup, e.g., PostgreSQL, MySQL]:** Ensure a database server is running and accessible.
-
-### Local Setup
-
-Follow these steps to get Stagea running locally:
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/your-username/stagea.git
-    cd stagea
-    ```
-
-2.  **Install Dependencies:**
-    *   If using npm:
-        ```bash
-        npm install
-        ```
-    *   If using Yarn:
-        ```bash
-        yarn install
-        ```
-
-3.  **Database Setup:**
-    *   If Stagea requires a database, follow the instructions in `docs/database_setup.md` to set up your database schema and seed initial data.
-    *   Ensure your database connection details are configured (see Configuration section).
-
-4.  **Build the Project:**
-    *   To build the project for development:
-        ```bash
-        npm run dev
-        # or
-        yarn dev
-        ```
-    *   To build for production:
-        ```bash
-        npm run build
-        # or
-        yarn build
-        ```
-
-### Configuration
-
-Configuration settings are managed through environment variables.
-
-1.  **Create a `.env` file:** Copy the example environment file:
-    ```bash
-    cp .env.example .env
-    ```
-
-2.  **Edit `.env`:** Open the `.env` file in your preferred text editor and update the following variables with your specific settings:
-    *   `NODE_ENV`: `development` or `production`
-    *   `PORT`: The port your application will run on (e.g., `3000`)
-    *   `DATABASE_URL`: Your database connection string (e.g., `postgresql://user:password@host:port/database`)
-    *   `[Other relevant environment variables, e.g., API keys, secret keys]`
-
-## Usage
-
-Once the project is built and configured, you can start the development server:
-
-## Site Plan
-
-For a high-level overview of the project's architecture and goals, please refer to the [Site Plan](docs/site-plan.md).
-
-## Usage
-
-Once the project is built and configured, you can start the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
+```/dev/null/layout.txt#L1-19
+stagea-stuff/
+├── .cursor/skills/         # Enabled Cursor/Zed skills (caveman, compress, stagea-monorepo, …)
+├── .gitmodules             # Declares forum, wiki, blog, and shop submodules
+├── README.md
+├── CONTRIBUTING.md
+├── skills-lock.json        # Pinned content hashes for the caveman skill set
+├── auth/                   # (empty) reserved for Keycloak
+├── blog/                   # Submodule → TryGhost/Ghost (main, pinned to fe4ef54)
+├── docs/                   # Project planning, ADRs, per-app setup notes
+├── forum/                  # Submodule → NodeBB/NodeBB (master, pinned to ac8bad8)
+├── infra/                  # (empty) reserved for docker compose / nginx / edge config
+├── packages/               # (empty) reserved for shared TS packages (ui, auth-client, …)
+├── parts/                  # (empty) reserved for Directus parts catalogue
+├── services/               # (empty) reserved for backend service configs
+├── shop/                   # Submodule → saleor/storefront (main, pinned to be64a69)
+└── wiki/                   # Submodule → wikimedia/mediawiki (master, pinned to a0a8c14)
 ```
 
-Stagea will be accessible at `http://localhost:[PORT]` (where `[PORT]` is the port you configured in your `.env` file).
+## What Actually Exists Today
 
-For detailed usage instructions and guides on specific features, please refer to the documentation in the `/docs` directory.
+- **Forum (`forum/`)** — NodeBB submodule at `master`/`ac8bad8b`. Ships `Dockerfile`, `dev.Dockerfile`, and three compose files (`docker-compose.yml`, `docker-compose-pgsql.yml`, `docker-compose-redis.yml`). Entry point is `./nodebb` (CLI wrapper around `app.js`).
+- **Wiki (`wiki/`)** — MediaWiki submodule at `master`/`a0a8c145`. Includes `docker-compose.yml`, `composer.json`, and the `mw-config/` web installer. `LocalSettings.php` is intentionally absent until you run the installer.
+- **Blog (`blog/`)** — Ghost monorepo submodule at `main`/`fe4ef54b`, managed with `pnpm@10.33.0` and Nx 22. Dev stack is driven by `compose.dev.yaml` plus opt-in overlays (`compose.dev.sqlite.yaml`, `compose.dev.mailgun.yaml`, `compose.dev.analytics.yaml`, `compose.dev.storage.yaml`). Ghost itself has inner submodules, which `pnpm setup` initialises.
+- **Shop (`shop/`)** — Saleor storefront submodule at `main`/`be64a69`. Next.js 16 + React 19 + urql + Tailwind. Contents are only present after `git submodule update --init --recursive`.
+- **Docs (`docs/`)** — `site-plan.md`, `shop-setup.md`, `app_test_plan.md`, `wiki_options.md`, and a wiki-specific `CONTRIBUTING.md`.
+- **Skills (`.cursor/skills/`)** — Six skills, all activated via `ENABLED` marker files (see below).
+
+Everything else (`auth/`, `parts/`, `services/`, `infra/`, `packages/`) is an empty reserved directory. The `site-plan.md` describes the target state; the repo itself has not scaffolded those yet.
+
+## Cursor Skills
+
+The `.cursor/skills/` directory ships six skills. Each is activated by the presence of an empty `ENABLED` file alongside its `SKILL.md`, as required by the `zed-caveman` skill. Hashes for the caveman-family skills are pinned in `skills-lock.json`.
+
+| Skill | Trigger | What it does |
+| --- | --- | --- |
+| `caveman` | `/caveman`, "caveman mode", "be brief" | Ultra-compressed responses (~75% fewer tokens) at `lite`/`full`/`ultra`/`wenyan-*` intensities. |
+| `caveman-commit` | `/commit`, "write a commit" | Conventional Commits subject ≤50 chars, body only when "why" is non-obvious, no AI attribution. |
+| `caveman-review` | `/review`, "review this PR" | One-line PR comments in `L<line>: <problem>. <fix>.` form with `🔴 bug`/`🟡 risk`/`🔵 nit`/`❓ q` severity prefixes. |
+| `compress` | `/caveman:compress <file>` | Rewrites `CLAUDE.md`/docs in caveman form, keeps code/URLs/paths verbatim, writes backup to `FILE.original.md`. Requires Python 3.10+. |
+| `stagea-monorepo` | Any monorepo/layout question | Enforces that all Stagea work stays under `/Users/Shared/dev/stagea-stuff/`; new apps → `apps/<name>/`, shared code → `packages/<name>/`, planning → `docs/`. |
+| `zed-caveman` | `/zed-caveman` | Same compression rules as `caveman`, scoped to Zed Agent. Requires an `ENABLED` flag file next to its `SKILL.md`. |
+
+All six skills are currently enabled:
+
+```/dev/null/enabled.txt#L1-6
+.cursor/skills/caveman/ENABLED
+.cursor/skills/caveman-commit/ENABLED
+.cursor/skills/caveman-review/ENABLED
+.cursor/skills/compress/ENABLED
+.cursor/skills/stagea-monorepo/ENABLED
+.cursor/skills/zed-caveman/ENABLED
+```
+
+## Prerequisites
+
+Each submodule app brings its own toolchain. Install what you need for the services you intend to run:
+
+- **Git** ≥ 2.30 (required; submodule flow assumes `--recurse-submodules`).
+- **Docker Engine** ≥ 24 with Compose v2 (used by `forum/`, `wiki/`, `blog/`, and the planned `infra/` stack).
+- **Node.js** ≥ 20 LTS — NodeBB requires Node 20+; Ghost and the Saleor storefront are built against Node 20/22.
+- **pnpm** 10.33.0 — enforced by `blog/`; also used by `shop/`. `corepack enable` is the easiest install.
+- **PHP** 8.1+ and **Composer** — only if running the wiki without Docker.
+- **MongoDB 5+ or Redis 7.2+** — required by NodeBB (pick one as primary store); PostgreSQL is also supported.
+- **MySQL 8 / MariaDB 10.6** — required by Ghost in non-sqlite mode, and by MediaWiki.
+- **Python 3.10+** — only needed to run the `compress` skill locally.
+
+## Clone & Initialise
+
+```/dev/null/clone.sh#L1-5
+git clone --recurse-submodules <this-repo-url> stagea-stuff
+cd stagea-stuff
+
+# If you forgot --recurse-submodules:
+git submodule update --init --recursive
+```
+
+After init, verify all four submodules are populated and at the pinned commits:
+
+```/dev/null/verify.sh#L1-6
+git submodule status
+# fe4ef54b201c70cfea521b12a02c77c4d764a5f2 blog  (v6.25.0-231-gfe4ef54b20)
+# ac8bad8bc95394e27445b696515e3d115373bca8 forum (v4.10.2-6-gac8bad8bc9)
+# be64a695e57e9cca0fccb2a53ff774c25b0bd109 shop  (heads/main)
+# a0a8c1451e44de22451de7421d128bef114765cc wiki  (1.6.0-127028-ga0a8c1451e4)
+```
+
+A leading `-` on any line means that submodule hasn't been initialised; a leading `+` means its working tree has moved ahead of the pinned commit.
+
+## Running Each App Locally
+
+### Forum — NodeBB (`forum/`)
+
+```/dev/null/forum.sh#L1-4
+cd forum
+docker compose up      # brings up NodeBB + default datastore
+# or, native setup:
+./nodebb setup && ./nodebb start   # default port 4567
+```
+
+Pick one of `docker-compose.yml`, `docker-compose-redis.yml`, or `docker-compose-pgsql.yml` depending on your chosen datastore. Full NodeBB docs: <https://docs.nodebb.org>.
+
+### Wiki — MediaWiki (`wiki/`)
+
+```/dev/null/wiki.sh#L1-3
+cd wiki
+docker compose up      # serves the mw-config web installer on http://localhost:8080
+```
+
+Complete the browser installer to generate `LocalSettings.php`, then restart the container. See `docs/wiki_options.md` for the recommended extension set (`VisualEditor`, `Cite`, `ParserFunctions`, `Page Forms`, `SyntaxHighlight_GeSHi`).
+
+### Blog — Ghost (`blog/`)
+
+```/dev/null/blog.sh#L1-4
+cd blog
+pnpm setup                                # installs deps and inits Ghost's inner submodules
+pnpm dev                                  # docker-driven dev stack via compose.dev.yaml
+# admin UI: http://localhost:2368/ghost
+```
+
+Other entry points defined in `blog/package.json`: `pnpm dev:sqlite`, `pnpm dev:mailgun`, `pnpm dev:analytics`, `pnpm dev:storage`, `pnpm dev:stripe`, `pnpm dev:all`.
+
+### Shop — Saleor Storefront (`shop/`)
+
+```/dev/null/shop.sh#L1-5
+cd shop
+cp .env.example .env
+# set NEXT_PUBLIC_SALEOR_API_URL, NEXT_PUBLIC_DEFAULT_CHANNEL, NEXT_PUBLIC_STOREFRONT_URL
+pnpm install
+pnpm dev               # http://localhost:3000
+```
+
+`shop/` runs against an external Saleor GraphQL endpoint; there is no Saleor backend in this monorepo. Full setup notes in `docs/shop-setup.md`.
+
+## Updating a Submodule
+
+To bump a service to a newer upstream revision, do it in its own commit so the monorepo's history makes the version change easy to read:
+
+```/dev/null/bump.sh#L1-7
+cd <forum|wiki|blog|shop>
+git fetch origin
+git checkout <branch-or-tag>          # e.g. main, master, v4.11.0
+git pull --ff-only
+cd ..
+git add <forum|wiki|blog|shop>
+git commit -m "chore(<name>): bump submodule to <upstream>@<short-sha>"
+```
+
+The same pattern documented in `docs/shop-setup.md` §2.3 applies to all four submodules. Include the upstream commit range in the PR body.
+
+## Planned Services
+
+These directories exist as placeholders only. No code has been committed to them yet. The intended contents, per `docs/site-plan.md`, are:
+
+- `auth/` — Keycloak configuration (OIDC IdP, Apache 2.0 licensed) for SSO across all subdomains.
+- `parts/` — Directus instance backing a Nissan Stagea parts catalogue API.
+- `services/` — Per-service backend configs (e.g. `services/auth/`, `services/parts-api/`).
+- `infra/` — Docker Compose root, nginx configs, and edge/TLS setup.
+- `packages/` — Shared TypeScript packages (`ui`, `auth-client`, `api-client`, `config`) consumed by the Astro shell and adapters.
+
+Opening a PR that scaffolds any of these should also update `docs/site-plan.md` to reflect reality.
+
+## Docs
+
+- [`docs/site-plan.md`](docs/site-plan.md) — Target architecture: subdomains, identity layer, monorepo structure, shell.
+- [`docs/app_test_plan.md`](docs/app_test_plan.md) — Per-app smoke-test procedures (directory verification, install, build).
+- [`docs/shop-setup.md`](docs/shop-setup.md) — Saleor storefront submodule workflow and env vars.
+- [`docs/wiki_options.md`](docs/wiki_options.md) — MediaWiki extension picks and custom-plugin proposals.
+- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution rules specific to the MediaWiki instance.
 
 ## Contributing
 
-We welcome contributions from the community! Please read our `CONTRIBUTING.md` file for detailed guidelines on how to contribute code, report bugs, and suggest features.
+Repo-wide contribution rules are in [`CONTRIBUTING.md`](CONTRIBUTING.md). Wiki-content rules are in [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md). All new work must stay inside this repo (see the `stagea-monorepo` skill).
 
-## License
+## Licensing
 
-This project is licensed under the [Specify License, e.g., MIT License] - see the [LICENSE](LICENSE) file for details.
+Each submoduled upstream keeps its own license:
+
+- NodeBB — GPL-3.0 (`forum/LICENSE`)
+- MediaWiki — GPL-2.0-or-later (`wiki/COPYING`)
+- Ghost — MIT (`blog/LICENSE`)
+- Saleor Storefront — see `shop/LICENSE`
+
+The Stagea-specific glue (docs, skills, infra to be added) has no repo-level license file yet. Add one before any public release.

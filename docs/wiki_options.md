@@ -1,86 +1,91 @@
-aturity and Stability:** Powers Wikipedia and many other large wikis.
-*   **Extensibility:** A vast ecosystem of extensions and skins.
-*   **Scalability:** Capable of handling large amounts of content and traffic.
-*   **Features:** Rich text editing, version control, user management, search, etc.
+# Wiki — MediaWiki Configuration Plan
 
-## 2. Essential MediaWiki Extensions
+The `wiki/` directory is a Git submodule pointing at `github.com/wikimedia/mediawiki`, tracking `master` and pinned to commit `a0a8c14`. This document records why MediaWiki was chosen and which extensions and custom modules the Stagea wiki will depend on. It replaces any earlier draft that used placeholder language.
 
-To enhance functionality, the following extensions are recommended:
+## 1. Why MediaWiki
 
-*   **`VisualEditor`:** Provides a WYSIWYG editing experience, making it more accessible for non-technical users.
-*   **`Cite`:** Essential for proper citation and referencing, crucial for a knowledge base.
-*   **`ParserFunctions`:** Adds more advanced parsing capabilities (e.g., `#if`, `#switch`) for dynamic content.
-*   **`Skins`:** Consider a modern skin like `Vector` (default) or explore others for a refreshed look and feel. `Timeless` is another good option for a cleaner interface.
-*   **`Page Forms` and `Page Schemas`:** For structured data and creating forms to input standardized information (e.g., product details, event listings).
-*   **`BlueSpice` (or similar enterprise extensions):** If advanced features like user management, workflows, and collaboration tools are needed beyond core MediaWiki. *Note: BlueSpice has commercial components.*
-*   **`Gadgets`:** To allow users to enable custom JavaScript functionalities.
+- **Proven at scale.** Powers Wikipedia and every Wikimedia project; no practical content ceiling for our traffic.
+- **Extension ecosystem.** 900+ maintained extensions plus first-party skins, so we almost never need to fork.
+- **Operational simplicity.** LAMP/LEMP stack, single PHP process, supports MariaDB 10.6 / MySQL 8 / PostgreSQL 10+.
+- **Licensing.** GPL-2.0-or-later, compatible with the Stagea licensing policy.
+- **Internationalisation.** 350+ locales out of the box — relevant because Nissan Stagea enthusiasts are concentrated in AU/NZ/JP/UK.
 
-## 3. Ideas for Plugins/Extensions (Custom Development)
+Considered and rejected: BookStack (PHP, MIT) lacks VisualEditor-grade WYSIWYG for structured pages; Wiki.js v2 (Node, AGPL) has a more modern UI but AGPL is off-limits; Outline (Node, BUSL) is source-available and therefore excluded.
 
-Beyond standard extensions, custom plugins could be developed to integrate Stagea-specific workflows:
+## 2. Required Core Extensions (bundled with MediaWiki)
 
-*   **`Stagea Project Integration`:**
-    *   **Description:** A plugin to link wiki pages directly to Stagea projects. This could involve displaying project status, deadlines, or associated documentation directly within the wiki or vice-versa.
-    *   **Functionality:**
-        *   Create a new page type for "Projects".
-        *   Allow embedding project summaries on wiki pages.
-        *   Potentially sync basic data with a Stagea project management tool (if one exists).
+Enable these in `LocalSettings.php` before first public launch:
 
-*   **`Stagea Product Catalog`:**
-    *   **Description:** A structured way to document Stagea products, including specifications, manuals, support articles, and related accessories.
-    *   **Functionality:**
-        *   Utilize `Page Forms` and `Page Schemas` for structured product data.
-        *   Implement search filters based on product categories, SKUs, or features.
-        *   Link to product-specific support wiki pages.
+- `VisualEditor` — WYSIWYG editor. Non-negotiable for non-technical contributors.
+- `Cite` — `<ref>` / `<references/>` markup for citations on technical pages.
+- `ParserFunctions` — `#if`, `#switch`, `#time`. Needed by most infobox templates.
+- `SyntaxHighlight_GeSHi` — Pygments-backed code blocks; required for parts firmware and tuning snippets.
+- `CategoryTree` — dynamic category browsing.
+- `CodeEditor` — syntax-highlighted wikitext editing in the source view.
+- `Scribunto` — Lua modules; prerequisite for any serious templating.
 
-*   **`Stagea Event Management`:**
-    *   **Description:** To document and track Stagea events, conferences, or webinars.
-    *   **Functionality:**
-        *   Forms for event details (date, time, location, speakers, agenda).
-        *   Ability to link to related wiki pages (e.g., speaker bios, presentation slides).
-        *   Calendar view for upcoming events.
+## 3. Third-Party Extensions to Install
 
-*   **`Stagea User Roles & Permissions`:**
-    *   **Description:** Fine-grained control over who can view, edit, or manage specific sections of the wiki, tailored to Stagea's organizational structure.
-    *   **Functionality:**
-        *   Define custom user groups (e.g., "Product Team", "Support Staff", "Marketing").
-        *   Apply permissions at the category or page level.
+Pulled separately into `wiki/extensions/<Name>/`:
 
-## 4. Skills to Help Populate the Wiki
+- `PageForms` + `PageSchemas` — structured data entry (e.g. Parts infoboxes with fields: part number, generation, year, condition). Replaces any hand-maintained HTML forms.
+- `SemanticMediaWiki` + `SemanticResultFormats` — queryable facts on pages so parts and trim levels can be filtered with `#ask`.
+- `Maps` (Maps extension) — geotag meets, scrapyards, and specialist workshops.
+- `TemplateData` — required for VisualEditor to render template inputs as forms.
+- `Gadgets` — per-user toggleable JS, used for the tuning-calculator gadget (see §4).
+- **Do not install `BlueSpice`.** It has commercial-only modules and an incompatible distribution model for our repo.
 
-To ensure the wiki is a valuable resource, we need strategies and "skills" (in the sense of capabilities or automated processes) to populate and maintain it:
+## 4. Custom Extensions to Build
 
-*   **Automated Content Ingestion:**
-    *   **Skill:** `Document Importer`
-        *   **Description:** A script or tool that can parse existing Stagea documentation (PDFs, Word docs, Markdown files) and convert them into MediaWiki format. This would require careful mapping of headings, tables, and images.
-        *   **Implementation:** Could be a Python script using libraries like `pandoc` or specific MediaWiki API calls.
+Each of these will live in `wiki/extensions/Stagea<Name>/` and follow the standard `extension.json` + `i18n/` layout.
 
-    *   **Skill:** `Code Snippet Extractor`
-        *   **Description:** A tool to scan Stagea's codebase (e.g., GitHub repositories) and extract relevant code snippets, automatically formatting them with syntax highlighting for the wiki.
-        *   **Implementation:** Use `grep` or AST parsers to find code blocks and then use MediaWiki's `SyntaxHighlight_GeSHi` extension or similar.
+### 4.1 `StageaPartsLink`
 
-*   **Content Curation and Structuring:**
-    *   **Skill:** `Template Generator`
-        *   **Description:** Create pre-defined templates for common content types (e.g., "How-To Guide", "Product Specification", "Bug Report"). Users fill in the template, ensuring consistency.
-        *   **Implementation:** Leverage MediaWiki's `Template` functionality, possibly with `Page Forms` for user-friendly input.
+- **Purpose:** render `{{PartsLink|<partNumber>}}` on any wiki page as a live link to the corresponding record in the Directus parts API (`parts.stagea-stuff.com`).
+- **Behaviour:** on save, the extension resolves the part number via `GET /items/parts?filter[number][_eq]=…` and caches the result in the wiki's object cache for 24 h.
+- **Dependencies:** the `parts/` service must be live; until then this extension is deferred.
 
-    *   **Skill:** `Tagging and Categorization Assistant`
-        *   **Description:** A semi-automated process to suggest relevant tags and categories for new pages based on their content.
-        *   **Implementation:** Could involve keyword analysis or natural language processing (NLP) to recommend categories.
+### 4.2 `StageaTuningCalc`
 
-*   **Knowledge Maintenance:**
-    *   **Skill:** `Stale Content Detector`
-        *   **Description:** A script that identifies pages that haven't been updated in a long time or that reference outdated information (e.g., old versions of software).
-        *   **Implementation:** Cron jobs running scripts that check page edit dates or specific keywords.
+- **Purpose:** expose a MediaWiki gadget that computes injector duty cycle, MAF scaling, and boost targets from values entered in an infobox.
+- **Behaviour:** pure client-side JS loaded via `Gadgets`; reads values from the rendered infobox and writes results into a `<div id="stagea-tuning-output">` slot.
 
-    *   **Skill:** `Link Checker`
-        *   **Description:** Regularly checks for broken internal and external links within the wiki.
-        *   **Implementation:** MediaWiki has built-in or extension-based link checking capabilities.
+### 4.3 `StageaSSO`
 
-## 5. Next Steps
+- **Purpose:** let Keycloak (once `auth/` exists) act as the wiki's identity provider via OIDC.
+- **Behaviour:** thin wrapper around `PluggableAuth` + `OpenIDConnect` configured against `https://auth.stagea-stuff.com/realms/stagea`. No local passwords in production.
 
-1.  **Set up MediaWiki Instance:** Install MediaWiki on the chosen hosting environment.
-2.  **Install Core Extensions:** Prioritize `VisualEditor`, `Cite`, and `ParserFunctions`.
-3.  **Develop Custom Plugins:** Begin with the most critical custom plugin (e.g., `Stagea Project Integration`).
-4.  **Develop Population Skills:** Start with the `Document Importer` and `Template Generator` skills.
-5.  **Onboard Users:** Provide training on using the wiki and its features.
+## 5. Content Population Playbook
+
+This replaces the earlier "skills to help populate the wiki" section, which was written before it was clear what we actually had to ingest.
+
+### 5.1 Document Importer
+
+- **Input:** the PDF workshop manuals and Word-format FAQ documents already in the Stagea community archive.
+- **Tool:** `pandoc --from=pdf --to=mediawiki` for simple documents; a Python script using `pypandoc` plus manual cleanup for anything with tables or images.
+- **Output:** one wiki page per source document, filed under `Category:Imported` for triage. No auto-publish to main namespace.
+
+### 5.2 Code Snippet Extractor
+
+- **Input:** tuning maps, ECU pin-outs, and helper scripts stored in `github.com/<stagea-community>/*` repositories.
+- **Tool:** a scheduled GitHub Action that runs `grep -nE '^## ' README.md` and pushes each snippet as a subpage under `Project:<repo-name>/Snippets/<heading>`.
+- **Requirement:** `SyntaxHighlight_GeSHi` must be installed first.
+
+### 5.3 Template Generator
+
+- **Templates to create up front:** `Template:PartInfobox`, `Template:GenerationInfobox` (WGC34/WGNC34/M35), `Template:Meet`, `Template:Workshop`, `Template:HowTo`, `Template:TroubleshootingStep`.
+- Each template must ship a `TemplateData` block so VisualEditor renders inputs as a form.
+
+### 5.4 Link Checker
+
+- **Tool:** `php maintenance/run.php checkExternalLinks.php` run weekly via cron.
+- **Action on failure:** open an issue in this repo tagged `wiki-broken-link` with the page, old URL, and the HTTP status.
+
+## 6. Rollout Order
+
+1. Install MediaWiki with core + bundled extensions (§2). Run the web installer; commit `LocalSettings.php` only to a private ops repo, never to this monorepo.
+2. Install third-party extensions (§3) in the order listed; Scribunto before SemanticMediaWiki.
+3. Build `StageaTuningCalc` (no backend dependencies).
+4. Build `StageaSSO` once `auth/` is live.
+5. Build `StageaPartsLink` once `parts/` is live.
+6. Start content population (§5) — document importer first, then templates, then semantic data.
