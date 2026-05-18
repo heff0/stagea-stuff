@@ -61,17 +61,20 @@ Each test below lists the exact commands to run and the observable result that c
   git submodule update --init --recursive
   ```
 - **Install host workspace:** `cd blog && pnpm install --frozen-lockfile`. This installs Nx and the workspace tooling needed for `pnpm dev`. Allow ~1 min on a warm cache, ~5 min cold.
-- **Port preflight.** Ghost's dev stack binds:
-  - `2368` (gateway → admin/site)
-  - `6379` (Ghost-owned Redis)
-  - `1025`, `8025`, `8026` (mailpit SMTP + UI)
-  - `3306` if you use `pnpm dev` (MySQL); skip via `pnpm dev:sqlite`.
-  Stop any other service holding those ports first.
-- **Start:** `pnpm dev:sqlite` for the zero-config SQLite stack, or `pnpm dev` for MySQL. This is a long-running foreground task — it does `docker compose up -d --build`, then `nx run-many dev` for the admin SPA and four other workspace apps. First build is ~10–20 min on Apple Silicon.
+- **Port preflight.** Upstream Ghost binds `2368`, `6379`, `1025`, `8025`, `8026` on the host (and `3306` in non-sqlite mode). The Stagea-side `infra/blog.override.yaml` resolves the conflict with `saleor-platform-cache-1` (6379) and `saleor-platform-mailpit-1` (1025/8025) by:
+  - Removing Ghost's Redis host port (still reachable inside the Docker network as `ghost-dev-redis:6379`).
+  - Shifting Ghost's mailpit ports to `11025` (SMTP), `18025`, and `18026` (web UI).
+  
+  With the override, only `2368` and `11025`/`18025`/`18026` need to be free on the host. Everything else stays inside the `ghost_dev` Docker network.
+- **Start:** `./infra/blog-dev.sh` from the repo root (default: SQLite). Pass `dev` for MySQL, `dev:mailgun`/`dev:analytics`/`dev:storage` for the other Ghost variants. This is a long-running foreground task — it does `docker compose up -d --build`, then `nx run-many dev` for the admin SPA and four other workspace apps. First build is ~10–20 min on Apple Silicon. Subsequent boots reuse the build cache and finish in ~30s.
+  
+  Running `cd blog && pnpm dev:sqlite` directly works too, but only when Saleor's cache and mailpit containers are stopped — it bypasses the override.
 - **Pass criteria:**
   - `curl -fsS http://localhost:2368/` returns HTTP 200 with `<title>Ghost</title>` (the Casper theme).
   - `curl -fsS http://localhost:2368/ghost/api/admin/site/ | jq -r .site.version` returns a semver (verified: `6.33`).
-  - `http://localhost:2368/ghost/` loads the Ember admin shell. **Note:** if you `Ctrl-C` `pnpm dev:sqlite` before the admin SPA finishes booting, this URL returns 502 — that is the Caddy gateway failing to find the admin dev server, not a Ghost backend failure.
+  - `http://localhost:2368/ghost/` loads the Ember admin shell. **Note:** if you `Ctrl-C` the wrapper before the admin SPA finishes booting, this URL returns 502 — that is the Caddy gateway failing to find the admin dev server, not a Ghost backend failure.
+  - `curl -fsS http://localhost:18025/` returns HTTP 200 with `<title>Mailpit</title>` (the Stagea-shifted mailpit UI).
+  - With the override active, `docker port ghost-dev-redis` lists only `6379/tcp` (container port, no host binding) and `docker port ghost-dev-mailpit` lists `11025/18025/18026` on the host.
 - **Teardown:** `pnpm docker:down` (or `pnpm docker:clean` to also remove volumes/images).
 
 ### 2.4 Shop — Saleor Storefront (`shop/`)
@@ -110,11 +113,45 @@ Currently skipped: `parts/` is an empty directory. When scaffolded, the expected
 - `docker compose -f services/parts-api/compose.yaml up -d`
 - `curl -fsS http://localhost:8055/server/health | jq -r .status` returns `"ok"`.
 
-## 3. Environment Requirements
+## 3. Running Everything in Parallel
+
+All four submodule services plus the upstream `saleor-platform` stack can run concurrently on a single host once `infra/blog.override.yaml` is in effect. Verified port allocation when every stack is up:
+
+| Host port | Owner | Service |
+| --- | --- | --- |
+| `2368` | `ghost-dev-gateway` | Ghost site + admin |
+| `3000` | host node | Saleor storefront (`shop/`, `pnpm dev`) |
+| `4567` | `forum-nodebb-1` | NodeBB web UI |
+| `5432` | `saleor-platform-db-1` | Saleor Postgres |
+| `6379` | `saleor-platform-cache-1` | Saleor Valkey (Ghost Redis stays internal-only) |
+| `8000` | `saleor-platform-api-1` | Saleor GraphQL API |
+| `8025` | `saleor-platform-mailpit-1` | Saleor mailpit UI |
+| `8080` | `wiki-mediawiki-web-1` | MediaWiki Apache |
+| `9000` | `saleor-platform-dashboard-1` | Saleor admin dashboard |
+| `11025` | `ghost-dev-mailpit` | Ghost mailpit SMTP (shifted from `1025` by override) |
+| `16686` | `saleor-platform-jaeger-1` | Saleor Jaeger tracing UI |
+| `18025` | `ghost-dev-mailpit` | Ghost mailpit web UI (shifted from `8025` by override) |
+| `18026` | `ghost-dev-mailpit` | Ghost mailpit web UI alt (shifted from `8026` by override) |
+| `27017` | `forum-mongo-1` | NodeBB Mongo |
+
+Startup order that works from a cold box:
+
+```/dev/null/up-all.sh#L1-7
+cd saleor-platform && docker compose up -d
+cd ../stagea-stuff/forum && docker compose up -d
+cd ../wiki && docker compose up -d
+cd ..
+./infra/blog-dev.sh &                              # foreground task; & to background it
+cd shop && pnpm dev &                              # also foreground; & to background it
+```
+
+Peak host resources with all five stacks healthy and idle: ~6 GiB RAM, ~14 listening TCP ports.
+
+## 4. Environment Requirements
 
 To run the full matrix you need: Docker Engine ≥ 24, Docker Compose v2, Node.js 20 LTS, pnpm 10.33.0 (via Corepack), PHP 8.1+ with Composer, and at least 8 GiB of free RAM (Ghost + MediaWiki + NodeBB + Saleor storefront running concurrently peaks around 5–6 GiB).
 
-## 4. Reporting
+## 5. Reporting
 
 Record each test as `pass`, `fail`, or `skipped` in the PR description that bumps an upstream. For failures, attach:
 

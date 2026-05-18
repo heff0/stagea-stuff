@@ -40,7 +40,7 @@ stagea-stuff/
 ├── blog/                   # Submodule → TryGhost/Ghost (main, pinned to 06b62ae2)
 ├── docs/                   # Project planning, ADRs, per-app setup notes
 ├── forum/                  # Submodule → NodeBB/NodeBB (master, pinned to ac8bad8)
-├── infra/                  # (empty) reserved for docker compose / nginx / edge config
+├── infra/                  # Compose overrides and wrappers (see infra/README.md)
 ├── packages/               # (empty) reserved for shared TS packages (ui, auth-client, …)
 ├── parts/                  # (empty) reserved for Directus parts catalogue
 ├── services/               # (empty) reserved for backend service configs
@@ -149,15 +149,16 @@ Complete the browser installer to generate `LocalSettings.php`, then restart the
 
 ### Blog — Ghost (`blog/`)
 
-```/dev/null/blog.sh#L1-5
-cd blog
-git submodule update --init --recursive   # pulls Casper + Source themes
-pnpm install --frozen-lockfile            # installs host workspace (Nx, etc.)
-pnpm dev:sqlite                           # foreground; brings up the full dev stack
-# site: http://localhost:2368/   admin: http://localhost:2368/ghost/
+```/dev/null/blog.sh#L1-4
+cd blog && git submodule update --init --recursive   # pulls Casper + Source themes (first time only)
+pnpm install --frozen-lockfile                       # installs host workspace (Nx, etc.)
+./infra/blog-dev.sh                                  # foreground; brings up the full dev stack
+# site: http://localhost:2368/   admin: http://localhost:2368/ghost/   mailpit: http://localhost:18025/
 ```
 
-Use `pnpm dev` for the MySQL stack instead of SQLite. Other entry points defined in `blog/package.json`: `pnpm dev:mailgun`, `pnpm dev:analytics`, `pnpm dev:storage`, `pnpm dev:stripe`, `pnpm dev:all`. Ghost binds ports `2368`, `6379`, `1025`, `8025`, `8026` (and `3306` in non-sqlite mode) — stop any other service holding them first.
+`infra/blog-dev.sh` is a thin wrapper around `pnpm nx run ghost-monorepo:docker:dev` that applies `infra/blog.override.yaml`. The override unexposes Ghost's Redis (still reachable inside the Docker network) and shifts Ghost's mailpit to host ports `11025` (SMTP), `18025`/`18026` (web UI) so Ghost can run alongside the saleor-platform stack without conflicts. Pass a variant as the first arg for the non-default stacks: `./infra/blog-dev.sh dev` (MySQL), `dev:mailgun`, `dev:analytics`, `dev:storage`.
+
+If you run `pnpm dev:sqlite` directly (bypassing the wrapper) you'll need to stop `saleor-platform-cache-1` and `saleor-platform-mailpit-1` first, because Ghost upstream's compose binds 6379/1025/8025 on the host.
 
 ### Shop — Saleor Storefront (`shop/`)
 
@@ -197,8 +198,9 @@ These directories exist as placeholders only. No code has been committed to them
 - `auth/` — Keycloak configuration (OIDC IdP, Apache 2.0 licensed) for SSO across all subdomains.
 - `parts/` — Directus instance backing a Nissan Stagea parts catalogue API.
 - `services/` — Per-service backend configs (e.g. `services/auth/`, `services/parts-api/`).
-- `infra/` — Docker Compose root, nginx configs, and edge/TLS setup.
 - `packages/` — Shared TypeScript packages (`ui`, `auth-client`, `api-client`, `config`) consumed by the Astro shell and adapters.
+
+`infra/` already exists (see [`infra/README.md`](infra/README.md)) and currently holds the Compose override and wrapper that let Ghost run alongside the saleor-platform stack. The eventual root `compose.yaml`, `nginx/`, and TLS automation will land in the same directory.
 
 Opening a PR that scaffolds any of these should also update `docs/site-plan.md` to reflect reality.
 
@@ -209,6 +211,7 @@ Opening a PR that scaffolds any of these should also update `docs/site-plan.md` 
 - [`docs/shop-setup.md`](docs/shop-setup.md) — Saleor storefront submodule workflow and env vars.
 - [`docs/wiki_options.md`](docs/wiki_options.md) — MediaWiki extension picks and custom-plugin proposals.
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution rules specific to the MediaWiki instance.
+- [`infra/README.md`](infra/README.md) — Compose overrides and wrapper scripts that wire submodule stacks together.
 
 ## Contributing
 

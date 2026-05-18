@@ -1,0 +1,36 @@
+# Stagea monorepo Compose override for blog/ (Ghost dev stack).
+#
+# Purpose: let blog/ run side-by-side with the saleor-platform stack
+# without host port conflicts.
+#
+# Saleor's stack owns these host ports:
+#   6379  saleor-platform-cache    (Valkey)
+#   1025  saleor-platform-mailpit  (SMTP)
+#   8025  saleor-platform-mailpit  (web UI)
+#
+# Ghost's compose.dev.yaml binds the same three ports. Without this
+# file, you must stop Saleor's cache and mailpit before bringing
+# Ghost up.
+#
+# With this file applied via `infra/blog-dev.sh` (or by exporting
+# DEV_COMPOSE_FILES manually), Ghost runs concurrently because:
+#
+#   - Ghost's redis is unexposed on the host. Ghost still reaches it
+#     by container name (ghost-dev-redis) on the ghost_dev docker
+#     network. If you need redis-cli access, use:
+#       docker exec -it ghost-dev-redis redis-cli
+#
+#   - Ghost's mailpit moves to host ports +10000 (11025 SMTP, 18025
+#     and 18026 web). All host-port shifts are purely external; the
+#     container still listens on 1025 and 8025 internally, so the
+#     ghost-dev container sees the standard endpoints.
+
+services:
+  redis:
+    ports: !override []
+
+  mailpit:
+    ports: !override
+      - "11025:1025"   # SMTP, was 1025:1025
+      - "18025:8025"   # Web UI, was 8025:8025
+      - "18026:8025"   # Web UI alt (used by Ghost e2e), was 8026:8025
