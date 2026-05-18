@@ -1,0 +1,29 @@
+# Stagea local-dev hub: a single static landing page that links to every
+# service running on this host (forum, wiki, blog, shop, admins, ops UIs).
+#
+# Lives in the parent monorepo (no submodule edits) and serves index.html
+# via a tiny nginx:alpine container. Port 8090 was picked because:
+#   - 80    is taken by the Ghost dev gateway
+#   - 8080  is taken by MediaWiki
+#   - 8000  is taken by the Saleor API
+#   - 8025  is taken by Saleor mailpit
+#
+# Bring it up:
+#   cd infra/homepage && docker compose up -d
+#
+# Open: http://localhost:8090/
+
+services:
+  homepage:
+    image: nginx:alpine
+    container_name: stagea-homepage
+    ports:
+      - "8090:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

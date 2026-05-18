@@ -118,6 +118,15 @@ git submodule status
 
 A leading `-` on any line means that submodule hasn't been initialised; a leading `+` means its working tree has moved ahead of the pinned commit.
 
+## Local Hub
+
+Once some or all of the services below are running, `infra/homepage/` provides a single landing page at <http://localhost:8090/> with a navbar linking to every UI (forum, wiki, blog, shop, admin panels, mailpit, Jaeger). It's a static `nginx:alpine` container with one bind-mounted HTML file — no build step.
+
+```/dev/null/hub.sh#L1-2
+cd infra/homepage && docker compose up -d
+# open http://localhost:8090/
+```
+
 ## Running Each App Locally
 
 ### Forum — NodeBB (`forum/`)

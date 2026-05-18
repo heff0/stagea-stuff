@@ -4,6 +4,19 @@ Stagea-monorepo infrastructure glue. Lives in the parent repo so it can be edite
 
 ## Files
 
+### `homepage/`
+
+A tiny static landing page that links to every service running on the host. Lets you treat `http://localhost:8090/` as the local-dev hub and click through to the forum, wiki, blog, shop, admins, and ops UIs without remembering individual ports.
+
+Bring it up:
+
+```/dev/null/homepage.sh#L1-2
+cd infra/homepage && docker compose up -d
+# open http://localhost:8090/
+```
+
+The container is `stagea-homepage` (`nginx:alpine`), bound to `8090:80`, and `restart: unless-stopped` so it comes back after a Docker Desktop restart. `index.html` is bind-mounted read-only, so edits are visible on browser refresh — no rebuild needed.
+
 ### `blog.override.yaml`
 
 A Docker Compose override that resolves the host-port conflicts between Ghost's dev stack (`blog/compose.dev.yaml`) and the saleor-platform stack:
