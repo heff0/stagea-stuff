@@ -1,0 +1,24 @@
+---
+import Layout from "~/layouts/Layout.astro";
+---
+
+<Layout
+  title="Account — Stagea"
+  description="Single sign-on across every Stagea service. Not yet available."
+>
+  <section class="py-16">
+    <h1 class="text-3xl font-bold tracking-tight">Account</h1>
+    <p class="mt-3 max-w-2xl text-(--color-muted)">
+      Single sign-on across forum, wiki, blog, and shop. Will exchange an OIDC
+      session from Keycloak (planned <code>auth/</code> service) for a signed
+      header that downstream services trust.
+    </p>
+
+    <div
+      class="mt-10 rounded-xl border border-dashed border-(--color-border) bg-(--color-surface)/30 p-10 text-center text-sm text-(--color-muted)"
+    >
+      Not implemented yet. The route exists so the navbar's "Sign in" link
+      resolves; the login flow lands when <code>auth/</code> is scaffolded.
+    </div>
+  </section>
+</Layout>

@@ -6,6 +6,7 @@ Public domains this repo targets:
 
 | Subdomain | Service | Upstream | Status in repo |
 | --- | --- | --- | --- |
+| `stagea-stuff.com` / `app.stagea-stuff.com` | Astro shell (landing page, planned search + OIDC login) | local (`shell/`) | Scaffolded in `shell/` |
 | `forum.stagea-stuff.com` | NodeBB (Node.js + Redis/Mongo/Postgres) | `github.com/NodeBB/NodeBB` | Submodule at `forum/` (tracks `master`, pinned to `ac8bad8`) |
 | `wiki.stagea-stuff.com` | MediaWiki (PHP) | `github.com/wikimedia/mediawiki` | Submodule at `wiki/` (tracks `master`, pinned to `a0a8c14`) |
 | `blog.stagea-stuff.com` | Ghost (Node.js, pnpm + Nx monorepo) | `github.com/TryGhost/Ghost` | Submodule at `blog/` (tracks `main`, pinned to `06b62ae2`) |
@@ -44,6 +45,7 @@ stagea-stuff/
 ├── packages/               # (empty) reserved for shared TS packages (ui, auth-client, …)
 ├── parts/                  # (empty) reserved for Directus parts catalogue
 ├── services/               # (empty) reserved for backend service configs
+├── shell/                  # Astro 6 + Tailwind 4 SSR app: end-user landing, planned search + login
 ├── shop/                   # Submodule → saleor/storefront (main, pinned to be64a69)
 └── wiki/                   # Submodule → wikimedia/mediawiki (master, pinned to a0a8c14)
 ```
@@ -169,6 +171,16 @@ pnpm install --frozen-lockfile                       # installs host workspace (
 
 If you run `pnpm dev:sqlite` directly (bypassing the wrapper) you'll need to stop `saleor-platform-cache-1` and `saleor-platform-mailpit-1` first, because Ghost upstream's compose binds 6379/1025/8025 on the host.
 
+### Shell — Stagea landing (`shell/`)
+
+```/dev/null/shell.sh#L1-3
+cd shell
+pnpm install --frozen-lockfile
+pnpm dev               # http://localhost:4321/
+```
+
+In-house Astro 6 + Tailwind 4 SSR app. Routes today: `/` (landing + service cards), `/search` (placeholder), `/account` (placeholder). The global navbar in `src/components/Header.astro` links forum / wiki / blog / shop at their `localhost:<port>` URLs and is rendered by every page. Full setup notes in `shell/README.md`.
+
 ### Shop — Saleor Storefront (`shop/`)
 
 ```/dev/null/shop.sh#L1-9
@@ -221,6 +233,7 @@ Opening a PR that scaffolds any of these should also update `docs/site-plan.md` 
 - [`docs/wiki_options.md`](docs/wiki_options.md) — MediaWiki extension picks and custom-plugin proposals.
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution rules specific to the MediaWiki instance.
 - [`infra/README.md`](infra/README.md) — Compose overrides and wrapper scripts that wire submodule stacks together.
+- [`shell/README.md`](shell/README.md) — Astro shell scaffold: stack choices, routes, future-extraction plan.
 
 ## Contributing
 

@@ -1,0 +1,28 @@
+{
+  "name": "@stagea/shell",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "End-user-facing Stagea community shell. Landing page, federated search (planned), and OIDC login (planned).",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
+    "check": "astro check",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^10.1.1",
+    "astro": "^6.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@tailwindcss/vite": "^4.3.0",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  }
+}

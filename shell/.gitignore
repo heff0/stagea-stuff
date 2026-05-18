@@ -1,0 +1,19 @@
+# build output
+dist/
+.astro/
+
+# deps
+node_modules/
+
+# env (parent .gitignore already covers this; restated here for clarity)
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store

@@ -1,248 +1,583 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stagea — Local Dev Hub</title>
-<style>
-:root {
-  --bg: #0b0d10;
-  --panel: #14171c;
-  --panel-hover: #1a1e25;
-  --border: #2a2f38;
-  --text: #e6e8eb;
-  --muted: #8b929c;
-  --accent: #ff7a45;
-  --accent-soft: rgba(255, 122, 69, 0.12);
-  --planned: #4a5260;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-}
-header {
-  position: sticky; top: 0; z-index: 10;
-  background: rgba(11, 13, 16, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-}
-nav {
-  display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  max-width: 1280px; margin: 0 auto; height: 56px;
-  flex-wrap: wrap;
-}
-.brand {
-  font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
-  color: var(--text); text-decoration: none; white-space: nowrap;
-}
-.brand span { color: var(--accent); }
-.nav-links {
-  display: flex; gap: 2px; list-style: none; flex-wrap: wrap;
-}
-.nav-links a {
-  display: inline-block; padding: 6px 12px; border-radius: 6px;
-  color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500;
-  white-space: nowrap;
-  transition: color 120ms ease, background 120ms ease;
-}
-.nav-links a:hover {
-  color: var(--text); background: var(--panel);
-}
-.nav-links a.primary {
-  color: var(--text);
-}
-.nav-divider {
-  width: 1px; height: 18px; background: var(--border); margin: 0 6px;
-  align-self: center;
-}
-main {
-  max-width: 1280px; margin: 0 auto; padding: 56px 24px 24px;
-}
-.hero {
-  margin-bottom: 56px;
-}
-.hero h1 {
-  font-size: 32px; font-weight: 700; letter-spacing: -0.02em;
-  margin-bottom: 8px;
-}
-.hero p { color: var(--muted); font-size: 15px; max-width: 600px; }
-section { margin-bottom: 40px; }
-section h2 {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
-  color: var(--muted); text-transform: uppercase;
-  margin-bottom: 16px;
-}
-.grid {
-  display: grid; gap: 14px;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-}
-.card {
-  display: block; padding: 18px 20px 20px; border-radius: 10px;
-  background: var(--panel); border: 1px solid var(--border);
-  text-decoration: none; color: inherit;
-  transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
-}
-.card:hover {
-  background: var(--panel-hover); border-color: var(--accent);
-  transform: translateY(-1px);
-}
-.card.planned { opacity: 0.55; cursor: not-allowed; }
-.card.planned:hover { transform: none; border-color: var(--border); background: var(--panel); }
-.card .card-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; gap: 8px;
-}
-.card h3 {
-  font-size: 15px; font-weight: 600;
-}
-.card p {
-  color: var(--muted); font-size: 13px; line-height: 1.55;
-  min-height: 38px;
-}
-.url {
-  font-family: "SF Mono", Menlo, Consolas, monospace;
-  font-size: 11px; color: var(--muted);
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.badge {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 2px 7px; border-radius: 4px;
-  color: var(--accent); background: var(--accent-soft);
-  white-space: nowrap;
-}
-.badge.planned { color: var(--planned); background: rgba(74, 82, 96, 0.18); }
-.badge.admin { color: #66c4ff; background: rgba(102, 196, 255, 0.12); }
-.badge.ops { color: #a78bfa; background: rgba(167, 139, 250, 0.12); }
-footer {
-  text-align: center; padding: 32px 24px; color: var(--muted); font-size: 12px;
-  border-top: 1px solid var(--border); margin-top: 56px;
-}
-footer a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--border); }
-footer a:hover { color: var(--text); border-color: var(--text); }
-</style>
-</head>
-<body>
-<header>
-  <nav>
-    <a href="/" class="brand">Stagea<span>.</span>local</a>
-    <ul class="nav-links" aria-label="Service navigation">
-      <li><a class="primary" href="http://localhost:4567/" target="_blank" rel="noopener">Forum</a></li>
-      <li><a class="primary" href="http://localhost:8080/w/" target="_blank" rel="noopener">Wiki</a></li>
-      <li><a class="primary" href="http://localhost:2368/" target="_blank" rel="noopener">Blog</a></li>
-      <li><a class="primary" href="http://localhost:3000/" target="_blank" rel="noopener">Shop</a></li>
-      <li><span class="nav-divider" aria-hidden="true"></span></li>
-      <li><a href="http://localhost:9000/" target="_blank" rel="noopener">Saleor</a></li>
-      <li><a href="http://localhost:2368/ghost/" target="_blank" rel="noopener">Ghost Admin</a></li>
-      <li><a href="http://localhost:4567/admin" target="_blank" rel="noopener">NodeBB Admin</a></li>
-      <li><span class="nav-divider" aria-hidden="true"></span></li>
-      <li><a href="http://localhost:8025/" target="_blank" rel="noopener">Saleor Mail</a></li>
-      <li><a href="http://localhost:18025/" target="_blank" rel="noopener">Ghost Mail</a></li>
-      <li><a href="http://localhost:16686/" target="_blank" rel="noopener">Traces</a></li>
-    </ul>
-  </nav>
-</header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Stagea — Local Dev Hub</title>
+        <style>
+            :root {
+                --bg: #0b0d10;
+                --panel: #14171c;
+                --panel-hover: #1a1e25;
+                --border: #2a2f38;
+                --text: #e6e8eb;
+                --muted: #8b929c;
+                --accent: #ff7a45;
+                --accent-soft: rgba(255, 122, 69, 0.12);
+                --planned: #4a5260;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font:
+                    15px/1.5 -apple-system,
+                    BlinkMacSystemFont,
+                    "Segoe UI",
+                    Roboto,
+                    "Helvetica Neue",
+                    Arial,
+                    sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                -webkit-font-smoothing: antialiased;
+            }
+            header {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background: rgba(11, 13, 16, 0.92);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border-bottom: 1px solid var(--border);
+                padding: 0 24px;
+            }
+            nav {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 24px;
+                max-width: 1280px;
+                margin: 0 auto;
+                height: 56px;
+                flex-wrap: wrap;
+            }
+            .brand {
+                font-size: 16px;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+                color: var(--text);
+                text-decoration: none;
+                white-space: nowrap;
+            }
+            .brand span {
+                color: var(--accent);
+            }
+            .nav-links {
+                display: flex;
+                gap: 2px;
+                list-style: none;
+                flex-wrap: wrap;
+            }
+            .nav-links a {
+                display: inline-block;
+                padding: 6px 12px;
+                border-radius: 6px;
+                color: var(--muted);
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 500;
+                white-space: nowrap;
+                transition:
+                    color 120ms ease,
+                    background 120ms ease;
+            }
+            .nav-links a:hover {
+                color: var(--text);
+                background: var(--panel);
+            }
+            .nav-links a.primary {
+                color: var(--text);
+            }
+            .nav-divider {
+                width: 1px;
+                height: 18px;
+                background: var(--border);
+                margin: 0 6px;
+                align-self: center;
+            }
+            main {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 56px 24px 24px;
+            }
+            .hero {
+                margin-bottom: 56px;
+            }
+            .hero h1 {
+                font-size: 32px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                margin-bottom: 8px;
+            }
+            .hero p {
+                color: var(--muted);
+                font-size: 15px;
+                max-width: 600px;
+            }
+            section {
+                margin-bottom: 40px;
+            }
+            section h2 {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                color: var(--muted);
+                text-transform: uppercase;
+                margin-bottom: 16px;
+            }
+            .grid {
+                display: grid;
+                gap: 14px;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+            .card {
+                display: block;
+                padding: 18px 20px 20px;
+                border-radius: 10px;
+                background: var(--panel);
+                border: 1px solid var(--border);
+                text-decoration: none;
+                color: inherit;
+                transition:
+                    border-color 140ms ease,
+                    transform 140ms ease,
+                    background 140ms ease;
+            }
+            .card:hover {
+                background: var(--panel-hover);
+                border-color: var(--accent);
+                transform: translateY(-1px);
+            }
+            .card.planned {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            .card.planned:hover {
+                transform: none;
+                border-color: var(--border);
+                background: var(--panel);
+            }
+            .card .card-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                gap: 8px;
+            }
+            .card h3 {
+                font-size: 15px;
+                font-weight: 600;
+            }
+            .card p {
+                color: var(--muted);
+                font-size: 13px;
+                line-height: 1.55;
+                min-height: 38px;
+            }
+            .url {
+                font-family: "SF Mono", Menlo, Consolas, monospace;
+                font-size: 11px;
+                color: var(--muted);
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid var(--border);
+            }
+            .badge {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 2px 7px;
+                border-radius: 4px;
+                color: var(--accent);
+                background: var(--accent-soft);
+                white-space: nowrap;
+            }
+            .badge.planned {
+                color: var(--planned);
+                background: rgba(74, 82, 96, 0.18);
+            }
+            .badge.admin {
+                color: #66c4ff;
+                background: rgba(102, 196, 255, 0.12);
+            }
+            .badge.ops {
+                color: #a78bfa;
+                background: rgba(167, 139, 250, 0.12);
+            }
+            footer {
+                text-align: center;
+                padding: 32px 24px;
+                color: var(--muted);
+                font-size: 12px;
+                border-top: 1px solid var(--border);
+                margin-top: 56px;
+            }
+            footer a {
+                color: var(--muted);
+                text-decoration: none;
+                border-bottom: 1px dotted var(--border);
+            }
+            footer a:hover {
+                color: var(--text);
+                border-color: var(--text);
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <nav>
+                <a href="/" class="brand">Stagea<span>.</span>local</a>
+                <ul class="nav-links" aria-label="Service navigation">
+                    <li>
+                        <a
+                            class="primary"
+                            href="http://localhost:4321/"
+                            target="_blank"
+                            rel="noopener"
+                            >Shell</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            class="primary"
+                            href="http://localhost:4567/"
+                            target="_blank"
+                            rel="noopener"
+                            >Forum</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            class="primary"
+                            href="http://localhost:8080/w/"
+                            target="_blank"
+                            rel="noopener"
+                            >Wiki</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            class="primary"
+                            href="http://localhost:2368/"
+                            target="_blank"
+                            rel="noopener"
+                            >Blog</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            class="primary"
+                            href="http://localhost:3000/"
+                            target="_blank"
+                            rel="noopener"
+                            >Shop</a
+                        >
+                    </li>
+                    <li>
+                        <span class="nav-divider" aria-hidden="true"></span>
+                    </li>
+                    <li>
+                        <a
+                            href="http://localhost:9000/"
+                            target="_blank"
+                            rel="noopener"
+                            >Saleor</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="http://localhost:2368/ghost/"
+                            target="_blank"
+                            rel="noopener"
+                            >Ghost Admin</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="http://localhost:4567/admin"
+                            target="_blank"
+                            rel="noopener"
+                            >NodeBB Admin</a
+                        >
+                    </li>
+                    <li>
+                        <span class="nav-divider" aria-hidden="true"></span>
+                    </li>
+                    <li>
+                        <a
+                            href="http://localhost:8025/"
+                            target="_blank"
+                            rel="noopener"
+                            >Saleor Mail</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="http://localhost:18025/"
+                            target="_blank"
+                            rel="noopener"
+                            >Ghost Mail</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="http://localhost:16686/"
+                            target="_blank"
+                            rel="noopener"
+                            >Traces</a
+                        >
+                    </li>
+                </ul>
+            </nav>
+        </header>
 
-<main>
-  <div class="hero">
-    <h1>Stagea local dev stack</h1>
-    <p>Five services + the Saleor platform, all running on this host. Use the navbar to jump straight to any UI, or pick a card below.</p>
-  </div>
+        <main>
+            <div class="hero">
+                <h1>Stagea local dev stack</h1>
+                <p>
+                    Five services + the Saleor platform, all running on this
+                    host. Use the navbar to jump straight to any UI, or pick a
+                    card below.
+                </p>
+            </div>
 
-  <section>
-    <h2>Services</h2>
-    <div class="grid">
-      <a href="http://localhost:4567/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Forum</h3><span class="badge">NodeBB</span></div>
-        <p>Community discussion board with real-time threads, plugins, and the "Harmony" theme.</p>
-        <div class="url">localhost:4567</div>
-      </a>
-      <a href="http://localhost:8080/w/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Wiki</h3><span class="badge">MediaWiki</span></div>
-        <p>Knowledge base for Nissan Stagea documentation, parts, and procedures.</p>
-        <div class="url">localhost:8080/w</div>
-      </a>
-      <a href="http://localhost:2368/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Blog</h3><span class="badge">Ghost</span></div>
-        <p>Editorial publishing platform with newsletters and members built in.</p>
-        <div class="url">localhost:2368</div>
-      </a>
-      <a href="http://localhost:3000/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Shop</h3><span class="badge">Saleor</span></div>
-        <p>Storefront for the parts shop. Backed by the local Saleor GraphQL API.</p>
-        <div class="url">localhost:3000</div>
-      </a>
-    </div>
-  </section>
+            <section>
+                <h2>Services</h2>
+                <div class="grid">
+                    <a
+                        href="http://localhost:4321/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Shell</h3>
+                            <span class="badge">Astro</span>
+                        </div>
+                        <p>
+                            End-user-facing landing page and (planned) federated
+                            search + OIDC login.
+                        </p>
+                        <div class="url">localhost:4321</div>
+                    </a>
+                    <a
+                        href="http://localhost:4567/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Forum</h3>
+                            <span class="badge">NodeBB</span>
+                        </div>
+                        <p>
+                            Community discussion board with real-time threads,
+                            plugins, and the "Harmony" theme.
+                        </p>
+                        <div class="url">localhost:4567</div>
+                    </a>
+                    <a
+                        href="http://localhost:8080/w/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Wiki</h3>
+                            <span class="badge">MediaWiki</span>
+                        </div>
+                        <p>
+                            Knowledge base for Nissan Stagea documentation,
+                            parts, and procedures.
+                        </p>
+                        <div class="url">localhost:8080/w</div>
+                    </a>
+                    <a
+                        href="http://localhost:2368/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Blog</h3>
+                            <span class="badge">Ghost</span>
+                        </div>
+                        <p>
+                            Editorial publishing platform with newsletters and
+                            members built in.
+                        </p>
+                        <div class="url">localhost:2368</div>
+                    </a>
+                    <a
+                        href="http://localhost:3000/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Shop</h3>
+                            <span class="badge">Saleor</span>
+                        </div>
+                        <p>
+                            Storefront for the parts shop. Backed by the local
+                            Saleor GraphQL API.
+                        </p>
+                        <div class="url">localhost:3000</div>
+                    </a>
+                </div>
+            </section>
 
-  <section>
-    <h2>Admin</h2>
-    <div class="grid">
-      <a href="http://localhost:9000/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Saleor Dashboard</h3><span class="badge admin">Admin</span></div>
-        <p>Manage products, channels, orders, customers, and Saleor configuration.</p>
-        <div class="url">localhost:9000</div>
-      </a>
-      <a href="http://localhost:2368/ghost/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Ghost Admin</h3><span class="badge admin">Admin</span></div>
-        <p>Write posts, manage members, edit theme, send newsletters.</p>
-        <div class="url">localhost:2368/ghost</div>
-      </a>
-      <a href="http://localhost:4567/admin" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>NodeBB Admin</h3><span class="badge admin">Admin</span></div>
-        <p>Forum categories, plugins, users, and theme. Requires the installer admin account.</p>
-        <div class="url">localhost:4567/admin</div>
-      </a>
-    </div>
-  </section>
+            <section>
+                <h2>Admin</h2>
+                <div class="grid">
+                    <a
+                        href="http://localhost:9000/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Saleor Dashboard</h3>
+                            <span class="badge admin">Admin</span>
+                        </div>
+                        <p>
+                            Manage products, channels, orders, customers, and
+                            Saleor configuration.
+                        </p>
+                        <div class="url">localhost:9000</div>
+                    </a>
+                    <a
+                        href="http://localhost:2368/ghost/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Ghost Admin</h3>
+                            <span class="badge admin">Admin</span>
+                        </div>
+                        <p>
+                            Write posts, manage members, edit theme, send
+                            newsletters.
+                        </p>
+                        <div class="url">localhost:2368/ghost</div>
+                    </a>
+                    <a
+                        href="http://localhost:4567/admin"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>NodeBB Admin</h3>
+                            <span class="badge admin">Admin</span>
+                        </div>
+                        <p>
+                            Forum categories, plugins, users, and theme.
+                            Requires the installer admin account.
+                        </p>
+                        <div class="url">localhost:4567/admin</div>
+                    </a>
+                </div>
+            </section>
 
-  <section>
-    <h2>Ops</h2>
-    <div class="grid">
-      <a href="http://localhost:8025/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Saleor Mailpit</h3><span class="badge ops">Email</span></div>
-        <p>Captures every outgoing email from the Saleor stack (accounts, orders, password resets).</p>
-        <div class="url">localhost:8025</div>
-      </a>
-      <a href="http://localhost:18025/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Ghost Mailpit</h3><span class="badge ops">Email</span></div>
-        <p>Captures every outgoing email from Ghost (member invites, newsletter previews).</p>
-        <div class="url">localhost:18025</div>
-      </a>
-      <a href="http://localhost:16686/" target="_blank" rel="noopener" class="card">
-        <div class="card-head"><h3>Jaeger</h3><span class="badge ops">Tracing</span></div>
-        <p>Distributed traces from the Saleor API and worker processes.</p>
-        <div class="url">localhost:16686</div>
-      </a>
-    </div>
-  </section>
+            <section>
+                <h2>Ops</h2>
+                <div class="grid">
+                    <a
+                        href="http://localhost:8025/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Saleor Mailpit</h3>
+                            <span class="badge ops">Email</span>
+                        </div>
+                        <p>
+                            Captures every outgoing email from the Saleor stack
+                            (accounts, orders, password resets).
+                        </p>
+                        <div class="url">localhost:8025</div>
+                    </a>
+                    <a
+                        href="http://localhost:18025/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Ghost Mailpit</h3>
+                            <span class="badge ops">Email</span>
+                        </div>
+                        <p>
+                            Captures every outgoing email from Ghost (member
+                            invites, newsletter previews).
+                        </p>
+                        <div class="url">localhost:18025</div>
+                    </a>
+                    <a
+                        href="http://localhost:16686/"
+                        target="_blank"
+                        rel="noopener"
+                        class="card"
+                    >
+                        <div class="card-head">
+                            <h3>Jaeger</h3>
+                            <span class="badge ops">Tracing</span>
+                        </div>
+                        <p>
+                            Distributed traces from the Saleor API and worker
+                            processes.
+                        </p>
+                        <div class="url">localhost:16686</div>
+                    </a>
+                </div>
+            </section>
 
-  <section>
-    <h2>Planned</h2>
-    <div class="grid">
-      <span class="card planned" aria-disabled="true">
-        <div class="card-head"><h3>Auth</h3><span class="badge planned">Keycloak</span></div>
-        <p>Single sign-on across every service via OIDC. Directory reserved at <code>auth/</code>; not yet scaffolded.</p>
-        <div class="url">auth.stagea-stuff.com</div>
-      </span>
-      <span class="card planned" aria-disabled="true">
-        <div class="card-head"><h3>Parts</h3><span class="badge planned">Directus</span></div>
-        <p>Nissan Stagea parts catalogue API. Directory reserved at <code>parts/</code>; not yet scaffolded.</p>
-        <div class="url">parts.stagea-stuff.com</div>
-      </span>
-    </div>
-  </section>
-</main>
+            <section>
+                <h2>Planned</h2>
+                <div class="grid">
+                    <span class="card planned" aria-disabled="true">
+                        <div class="card-head">
+                            <h3>Auth</h3>
+                            <span class="badge planned">Keycloak</span>
+                        </div>
+                        <p>
+                            Single sign-on across every service via OIDC.
+                            Directory reserved at <code>auth/</code>; not yet
+                            scaffolded.
+                        </p>
+                        <div class="url">auth.stagea-stuff.com</div>
+                    </span>
+                    <span class="card planned" aria-disabled="true">
+                        <div class="card-head">
+                            <h3>Parts</h3>
+                            <span class="badge planned">Directus</span>
+                        </div>
+                        <p>
+                            Nissan Stagea parts catalogue API. Directory
+                            reserved at <code>parts/</code>; not yet scaffolded.
+                        </p>
+                        <div class="url">parts.stagea-stuff.com</div>
+                    </span>
+                </div>
+            </section>
+        </main>
 
-<footer>
-  Stagea monorepo &middot; <a href="https://github.com/heff0/stagea-stuff" target="_blank" rel="noopener">github.com/heff0/stagea-stuff</a>
-</footer>
-</body>
+        <footer>
+            Stagea monorepo &middot;
+            <a
+                href="https://github.com/heff0/stagea-stuff"
+                target="_blank"
+                rel="noopener"
+                >github.com/heff0/stagea-stuff</a
+            >
+        </footer>
+    </body>
 </html>

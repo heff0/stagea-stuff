@@ -1,0 +1,70 @@
+---
+// Top-of-page navigation. Lives in src/layouts/Layout.astro so every route
+// renders it without extra wiring. When the shell starts proxying the
+// upstream services under app.stagea-stuff.com paths, swap the absolute
+// localhost URLs below for /forum, /wiki, /blog, /shop.
+
+const services = [
+  { name: "Forum", href: "http://localhost:4567/" },
+  { name: "Wiki", href: "http://localhost:8080/w/" },
+  { name: "Blog", href: "http://localhost:2368/" },
+  { name: "Shop", href: "http://localhost:3000/" },
+];
+
+const path = Astro.url.pathname;
+---
+
+<header
+  class="sticky top-0 z-20 border-b border-(--color-border) bg-(--color-bg)/85 backdrop-blur"
+>
+  <nav
+    class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-6"
+  >
+    <a
+      href="/"
+      class="text-base font-bold tracking-tight text-(--color-text)"
+      aria-label="Stagea home"
+    >
+      Stagea<span class="text-(--color-accent)">.</span>
+    </a>
+
+    <ul class="flex flex-wrap items-center gap-1" aria-label="Service navigation">
+      {
+        services.map((service) => (
+          <li>
+            <a
+              href={service.href}
+              class="rounded-md px-3 py-1.5 text-sm text-(--color-muted) transition hover:bg-(--color-surface) hover:text-(--color-text)"
+            >
+              {service.name}
+            </a>
+          </li>
+        ))
+      }
+
+      <li class="mx-1 h-4 w-px bg-(--color-border)" aria-hidden="true"></li>
+
+      <li>
+        <a
+          href="/search"
+          aria-current={path === "/search" ? "page" : undefined}
+          class:list={[
+            "rounded-md px-3 py-1.5 text-sm transition hover:bg-(--color-surface) hover:text-(--color-text)",
+            path === "/search" ? "text-(--color-text)" : "text-(--color-muted)",
+          ]}
+        >
+          Search
+        </a>
+      </li>
+      <li>
+        <a
+          href="/account"
+          aria-current={path === "/account" ? "page" : undefined}
+          class="rounded-md bg-(--color-accent-soft) px-3 py-1.5 text-sm font-medium text-(--color-accent) transition hover:bg-(--color-accent)/20"
+        >
+          Sign in
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>

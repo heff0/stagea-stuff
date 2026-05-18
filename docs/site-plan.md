@@ -14,7 +14,7 @@ This document describes the target architecture for the Stagea community platfor
 
 | Subdomain | Service | Upstream | Repo path | State |
 | --- | --- | --- | --- | --- |
-| `app.stagea-stuff.com` | Astro shell (global nav, auth-aware chrome) | to be chosen from: Astro, Next.js, Nuxt | `apps/shell/` | Planned |
+| `app.stagea-stuff.com` | Astro shell (global nav, auth-aware chrome) | Astro 6 + Tailwind 4 (in-house) | `shell/` | Scaffolded (frontend only; search + login deferred) |
 | `forum.stagea-stuff.com` | NodeBB | `github.com/NodeBB/NodeBB` | `forum/` | Implemented (submodule, `master`, pinned to `ac8bad8`) |
 | `wiki.stagea-stuff.com` | MediaWiki | `github.com/wikimedia/mediawiki` | `wiki/` | Implemented (submodule, `master`, pinned to `a0a8c14`) |
 | `blog.stagea-stuff.com` | Ghost | `github.com/TryGhost/Ghost` | `blog/` | Implemented (submodule, `main`, pinned to `06b62ae2`) |

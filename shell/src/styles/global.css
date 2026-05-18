@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* Stagea theme tokens. Tailwind 4 reads these out of @theme and exposes them
+   as utility classes (e.g. bg-bg, text-accent) and CSS variables. */
+@theme {
+  --color-bg: #0a0c0f;
+  --color-surface: #14171c;
+  --color-surface-hover: #1a1e25;
+  --color-border: #262a32;
+  --color-text: #e8eaed;
+  --color-muted: #8b929c;
+  --color-accent: #ff7a45;
+  --color-accent-soft: rgba(255, 122, 69, 0.12);
+
+  --font-display:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
