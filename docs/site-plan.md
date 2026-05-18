@@ -17,7 +17,7 @@ This document describes the target architecture for the Stagea community platfor
 | `app.stagea-stuff.com` | Astro shell (global nav, auth-aware chrome) | to be chosen from: Astro, Next.js, Nuxt | `apps/shell/` | Planned |
 | `forum.stagea-stuff.com` | NodeBB | `github.com/NodeBB/NodeBB` | `forum/` | Implemented (submodule, `master`, pinned to `ac8bad8`) |
 | `wiki.stagea-stuff.com` | MediaWiki | `github.com/wikimedia/mediawiki` | `wiki/` | Implemented (submodule, `master`, pinned to `a0a8c14`) |
-| `blog.stagea-stuff.com` | Ghost | `github.com/TryGhost/Ghost` | `blog/` | Implemented (submodule, `main`, pinned to `fe4ef54`) |
+| `blog.stagea-stuff.com` | Ghost | `github.com/TryGhost/Ghost` | `blog/` | Implemented (submodule, `main`, pinned to `06b62ae2`) |
 | `shop.stagea-stuff.com` | Saleor Storefront "Paper" | `github.com/saleor/storefront` | `shop/` | Implemented (submodule, `main`, pinned to `be64a69`) |
 | `auth.stagea-stuff.com` | Keycloak | `github.com/keycloak/keycloak` | `auth/`, `services/auth/` | Planned (directory empty) |
 | `parts.stagea-stuff.com` | Directus parts catalogue | `github.com/directus/directus` | `parts/`, `services/parts-api/` | Planned (directory empty) |

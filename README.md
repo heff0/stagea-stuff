@@ -8,7 +8,7 @@ Public domains this repo targets:
 | --- | --- | --- | --- |
 | `forum.stagea-stuff.com` | NodeBB (Node.js + Redis/Mongo/Postgres) | `github.com/NodeBB/NodeBB` | Submodule at `forum/` (tracks `master`, pinned to `ac8bad8`) |
 | `wiki.stagea-stuff.com` | MediaWiki (PHP) | `github.com/wikimedia/mediawiki` | Submodule at `wiki/` (tracks `master`, pinned to `a0a8c14`) |
-| `blog.stagea-stuff.com` | Ghost (Node.js, pnpm + Nx monorepo) | `github.com/TryGhost/Ghost` | Submodule at `blog/` (tracks `main`, pinned to `fe4ef54`) |
+| `blog.stagea-stuff.com` | Ghost (Node.js, pnpm + Nx monorepo) | `github.com/TryGhost/Ghost` | Submodule at `blog/` (tracks `main`, pinned to `06b62ae2`) |
 | `shop.stagea-stuff.com` | Saleor Storefront "Paper" (Next.js 16 + GraphQL) | `github.com/saleor/storefront` | Submodule at `shop/` (tracks `main`, pinned to `be64a69`) |
 | `auth.stagea-stuff.com` | Keycloak (OIDC identity provider) | `github.com/keycloak/keycloak` | Directory reserved (`auth/`), not yet populated |
 | `parts.stagea-stuff.com` | Directus-backed parts catalogue | `github.com/directus/directus` | Directory reserved (`parts/`), not yet populated |
@@ -37,7 +37,7 @@ stagea-stuff/
 ├── CONTRIBUTING.md
 ├── skills-lock.json        # Pinned content hashes for the caveman skill set
 ├── auth/                   # (empty) reserved for Keycloak
-├── blog/                   # Submodule → TryGhost/Ghost (main, pinned to fe4ef54)
+├── blog/                   # Submodule → TryGhost/Ghost (main, pinned to 06b62ae2)
 ├── docs/                   # Project planning, ADRs, per-app setup notes
 ├── forum/                  # Submodule → NodeBB/NodeBB (master, pinned to ac8bad8)
 ├── infra/                  # (empty) reserved for docker compose / nginx / edge config
@@ -52,7 +52,7 @@ stagea-stuff/
 
 - **Forum (`forum/`)** — NodeBB submodule at `master`/`ac8bad8b`. Ships `Dockerfile`, `dev.Dockerfile`, and three compose files (`docker-compose.yml`, `docker-compose-pgsql.yml`, `docker-compose-redis.yml`). Entry point is `./nodebb` (CLI wrapper around `app.js`).
 - **Wiki (`wiki/`)** — MediaWiki submodule at `master`/`a0a8c145`. Includes `docker-compose.yml`, `composer.json`, and the `mw-config/` web installer. `LocalSettings.php` is intentionally absent until you run the installer.
-- **Blog (`blog/`)** — Ghost monorepo submodule at `main`/`fe4ef54b`, managed with `pnpm@10.33.0` and Nx 22. Dev stack is driven by `compose.dev.yaml` plus opt-in overlays (`compose.dev.sqlite.yaml`, `compose.dev.mailgun.yaml`, `compose.dev.analytics.yaml`, `compose.dev.storage.yaml`). Ghost itself has inner submodules, which `pnpm setup` initialises.
+- **Blog (`blog/`)** — Ghost monorepo submodule at `main`/`06b62ae2`, managed with `pnpm@10.33.0` and Nx 22. Dev stack is driven by `compose.dev.yaml` plus opt-in overlays (`compose.dev.sqlite.yaml`, `compose.dev.mailgun.yaml`, `compose.dev.analytics.yaml`, `compose.dev.storage.yaml`). Ghost itself has inner submodules, which `pnpm setup` initialises.
 - **Shop (`shop/`)** — Saleor storefront submodule at `main`/`be64a69`. Next.js 16 + React 19 + urql + Tailwind. Contents are only present after `git submodule update --init --recursive`.
 - **Docs (`docs/`)** — `site-plan.md`, `shop-setup.md`, `app_test_plan.md`, `wiki_options.md`, and a wiki-specific `CONTRIBUTING.md`.
 - **Skills (`.cursor/skills/`)** — Six skills, all activated via `ENABLED` marker files (see below).
@@ -110,7 +110,7 @@ After init, verify all four submodules are populated and at the pinned commits:
 
 ```/dev/null/verify.sh#L1-6
 git submodule status
-# fe4ef54b201c70cfea521b12a02c77c4d764a5f2 blog  (v6.25.0-231-gfe4ef54b20)
+# 06b62ae2f3654328ca623271916096818fd0ef23 blog  (v6.25.0-406-g06b62ae2f3)
 # ac8bad8bc95394e27445b696515e3d115373bca8 forum (v4.10.2-6-gac8bad8bc9)
 # be64a695e57e9cca0fccb2a53ff774c25b0bd109 shop  (heads/main)
 # a0a8c1451e44de22451de7421d128bef114765cc wiki  (1.6.0-127028-ga0a8c1451e4)
@@ -133,35 +133,46 @@ Pick one of `docker-compose.yml`, `docker-compose-redis.yml`, or `docker-compose
 
 ### Wiki — MediaWiki (`wiki/`)
 
-```/dev/null/wiki.sh#L1-3
+```/dev/null/wiki.sh#L1-9
 cd wiki
-docker compose up      # serves the mw-config web installer on http://localhost:8080
+# Required: tell the compose stack which host UID/GID owns the bind-mounted source.
+# Match these to `id -u` / `id -g` on your machine.
+printf 'MW_DOCKER_UID=%s\nMW_DOCKER_GID=%s\n' "$(id -u)" "$(id -g)" > .env
+docker compose up -d
+# First boot returns HTTP 500 "Installing some dependencies is required."
+# Fix once by installing PHP deps inside the container:
+docker exec -w /var/www/html/w wiki-mediawiki-1 composer install --no-dev --no-interaction
+# Then open http://localhost:8080/w/mw-config/index.php to run the installer.
 ```
 
-Complete the browser installer to generate `LocalSettings.php`, then restart the container. See `docs/wiki_options.md` for the recommended extension set (`VisualEditor`, `Cite`, `ParserFunctions`, `Page Forms`, `SyntaxHighlight_GeSHi`).
+Complete the browser installer to generate `LocalSettings.php`, then restart the container. See `docs/wiki_options.md` for the recommended extension set (`VisualEditor`, `Cite`, `ParserFunctions`, `Page Forms`, `SyntaxHighlight_GeSHi`). Full per-app procedure in `docs/app_test_plan.md` §2.2.
 
 ### Blog — Ghost (`blog/`)
 
-```/dev/null/blog.sh#L1-4
+```/dev/null/blog.sh#L1-5
 cd blog
-pnpm setup                                # installs deps and inits Ghost's inner submodules
-pnpm dev                                  # docker-driven dev stack via compose.dev.yaml
-# admin UI: http://localhost:2368/ghost
+git submodule update --init --recursive   # pulls Casper + Source themes
+pnpm install --frozen-lockfile            # installs host workspace (Nx, etc.)
+pnpm dev:sqlite                           # foreground; brings up the full dev stack
+# site: http://localhost:2368/   admin: http://localhost:2368/ghost/
 ```
 
-Other entry points defined in `blog/package.json`: `pnpm dev:sqlite`, `pnpm dev:mailgun`, `pnpm dev:analytics`, `pnpm dev:storage`, `pnpm dev:stripe`, `pnpm dev:all`.
+Use `pnpm dev` for the MySQL stack instead of SQLite. Other entry points defined in `blog/package.json`: `pnpm dev:mailgun`, `pnpm dev:analytics`, `pnpm dev:storage`, `pnpm dev:stripe`, `pnpm dev:all`. Ghost binds ports `2368`, `6379`, `1025`, `8025`, `8026` (and `3306` in non-sqlite mode) — stop any other service holding them first.
 
 ### Shop — Saleor Storefront (`shop/`)
 
-```/dev/null/shop.sh#L1-5
+```/dev/null/shop.sh#L1-9
 cd shop
-cp .env.example .env
-# set NEXT_PUBLIC_SALEOR_API_URL, NEXT_PUBLIC_DEFAULT_CHANNEL, NEXT_PUBLIC_STOREFRONT_URL
-pnpm install
-pnpm dev               # http://localhost:3000
+cat > .env <<EOF
+NEXT_PUBLIC_SALEOR_API_URL=http://localhost:8000/graphql/
+NEXT_PUBLIC_STOREFRONT_URL=http://localhost:3000
+NEXT_PUBLIC_DEFAULT_CHANNEL=default-channel
+EOF
+pnpm install --frozen-lockfile
+pnpm dev               # http://localhost:3000 (falls back to 3001 if taken)
 ```
 
-`shop/` runs against an external Saleor GraphQL endpoint; there is no Saleor backend in this monorepo. Full setup notes in `docs/shop-setup.md`.
+`shop/` runs against an external Saleor GraphQL endpoint; there is no Saleor backend in this monorepo. The easy path is `git clone https://github.com/saleor/saleor-platform && cd saleor-platform && docker compose up -d`, which exposes the GraphQL API at `http://localhost:8000/graphql/` with a seeded `default-channel`. Full setup notes in `docs/shop-setup.md` and `docs/app_test_plan.md` §2.4.
 
 ## Updating a Submodule
 
