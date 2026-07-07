@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # 1. Astro Shell Node/PNPM Dependencies
+  - package-ecosystem: "npm"
+    directory: "/shell"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "shell-app"
+
+  # 2. Monorepo Git Submodules (Forum, Blog, Wiki, Shop)
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "submodules"
