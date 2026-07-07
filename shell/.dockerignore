@@ -1,0 +1,9 @@
+node_modules
+.astro
+dist
+.git
+.gitignore
+dev.log
+nohup.out
+Dockerfile
+docker-compose.yml

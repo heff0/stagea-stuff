@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  shell:
+    image: stagea-shell
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stagea-shell
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=4321
+      - PUBLIC_SITE_NAME=Stagea Community
+      # Configurable endpoints (12-factor Config)
+      - FORUM_URL=http://localhost:4567/
+      - WIKI_URL=http://localhost:8080/w/
+      - BLOG_URL=http://localhost:2368/
+      - SHOP_URL=http://localhost:3000/
+      # OIDC Authentication variables (to be injected at runtime)
+      - AUTH_ISSUER_URL=http://localhost:8080/realms/stagea
+      - AUTH_CLIENT_ID=shell-client
+      - AUTH_CLIENT_SECRET=placeholder-secret
+    restart: unless-stopped
