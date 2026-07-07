@@ -1,78 +1,138 @@
 ---
 import Layout from "~/layouts/Layout.astro";
+import { FORUM_URL, WIKI_URL, BLOG_URL, SHOP_URL } from "astro:env/server";
 
 const services = [
   {
     name: "Forum",
     badge: "NodeBB",
-    href: "http://localhost:4567/",
+    href: FORUM_URL,
+    action: "Join the discussion",
     description:
-      "Talk to other Stagea owners. Build threads, share fixes, ask questions.",
+      "Build threads, troubleshooting, event planning and owner questions in one searchable forum.",
   },
   {
     name: "Wiki",
     badge: "MediaWiki",
-    href: "http://localhost:8080/w/",
+    href: WIKI_URL,
+    action: "Read the knowledge base",
     description:
-      "Knowledge base of Stagea-specific docs, part numbers, and procedures.",
+      "Documented procedures, chassis notes, trim differences, part numbers and maintenance references.",
   },
   {
     name: "Blog",
     badge: "Ghost",
-    href: "http://localhost:2368/",
-    description: "Editorial features and community newsletters.",
+    href: BLOG_URL,
+    action: "Read stories",
+    description:
+      "Long-form builds, guides, meet coverage and community updates from the Stagea scene.",
   },
   {
     name: "Shop",
     badge: "Saleor",
-    href: "http://localhost:3000/",
-    description: "Curated parts and merch, fulfilled through Saleor.",
+    href: SHOP_URL,
+    action: "Browse parts",
+    description:
+      "A storefront for Stagea parts and community merch, backed by a local Saleor catalogue.",
   },
+];
+
+const highlights = [
+  "C34 and M35 generation notes",
+  "OEM part number cross-references",
+  "Build logs and repair threads",
+  "Parts catalogue and storefront",
 ];
 ---
 
 <Layout>
-  <section class="py-16">
-    <p class="text-sm font-semibold uppercase tracking-widest text-(--color-accent)">
-      Nissan Stagea community
-    </p>
-    <h1 class="mt-3 text-5xl font-bold tracking-tight md:text-6xl">
-      Stagea, in one place.
-    </h1>
-    <p class="mt-5 max-w-2xl text-lg text-(--color-muted)">
-      Forum, wiki, blog and parts shop &mdash; one account, one community. Built
-      by owners, for owners.
-    </p>
+  <section class="grid gap-10 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-[0.24em] text-(--color-accent)">
+        Nissan Stagea community
+      </p>
+      <h1 class="mt-4 max-w-4xl text-5xl font-bold tracking-tight text-balance md:text-7xl">
+        The owner hub for keeping Stageas on the road.
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg leading-8 text-(--color-muted)">
+        One front door for discussion, verified documentation, community stories
+        and parts. Powered by a stateless Astro core executing federated query routing
+        and OIDC token exchange across our containerized backing services.
+      </p>
 
-    <div class="mt-8 flex flex-wrap gap-3">
-      <a
-        href="/account"
-        class="inline-flex items-center rounded-md bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-(--color-bg) transition hover:bg-(--color-accent)/90"
-      >
-        Sign in
-      </a>
-      <a
-        href="#services"
-        class="inline-flex items-center rounded-md border border-(--color-border) px-5 py-2.5 text-sm font-medium text-(--color-text) transition hover:bg-(--color-surface)"
-      >
-        Browse the stack
-      </a>
+      <div class="mt-9 flex flex-wrap gap-3">
+        <a
+          href="#services"
+          class="inline-flex items-center rounded-md bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-(--color-bg) transition hover:bg-(--color-accent)/90"
+        >
+          Explore services
+        </a>
+        <a
+          href="/search"
+          class="inline-flex items-center rounded-md border border-(--color-border) px-5 py-2.5 text-sm font-medium text-(--color-text) transition hover:bg-(--color-surface)"
+        >
+          Search preview
+        </a>
+      </div>
+    </div>
+
+    <div class="rounded-3xl border border-(--color-border) bg-(--color-surface)/55 p-5 shadow-2xl shadow-black/30">
+      <div class="rounded-2xl border border-(--color-border) bg-(--color-bg)/70 p-5">
+        <div class="flex items-center justify-between gap-4 border-b border-(--color-border) pb-4">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-(--color-muted)">
+              Live stack
+            </p>
+            <h2 class="mt-1 text-2xl font-semibold">Stagea local</h2>
+          </div>
+          <span class="rounded-full bg-(--color-accent-soft) px-3 py-1 text-xs font-semibold text-(--color-accent)">
+            Frontend shell
+          </span>
+        </div>
+
+        <div class="mt-5 grid gap-3">
+          {
+            services.map((service) => (
+              <a
+                href={service.href}
+                class="group flex items-center justify-between rounded-xl border border-(--color-border) bg-(--color-surface) p-4 transition hover:border-(--color-accent) hover:bg-(--color-surface-hover)"
+              >
+                <div>
+                  <p class="font-semibold">{service.name}</p>
+                  <p class="mt-0.5 text-xs text-(--color-muted)">{service.action}</p>
+                </div>
+                <span class="text-sm text-(--color-muted) transition group-hover:text-(--color-accent)">
+                  →
+                </span>
+              </a>
+            ))
+          }
+        </div>
+      </div>
     </div>
   </section>
 
-  <section id="services" class="scroll-mt-20">
-    <h2
-      class="mb-6 text-xs font-bold uppercase tracking-widest text-(--color-muted)"
-    >
-      Services
-    </h2>
+  <section id="services" class="scroll-mt-20 py-10">
+    <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.22em] text-(--color-accent)">
+          Services
+        </p>
+        <h2 class="mt-2 text-3xl font-bold tracking-tight">Choose where to start.</h2>
+      </div>
+      <p class="max-w-xl text-sm leading-6 text-(--color-muted)">
+        Each card opens the current local service. Later these links move behind
+        one same-origin reverse proxy so the shell can own navigation, session
+        state and search context.
+      </p>
+    </div>
 
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
       {
         services.map((service) => (
           <a
             href={service.href}
-            class="group rounded-xl border border-(--color-border) bg-(--color-surface)/60 p-6 transition hover:-translate-y-0.5 hover:border-(--color-accent) hover:bg-(--color-surface-hover)"
+            class="group rounded-2xl border border-(--color-border) bg-(--color-surface)/60 p-6 transition hover:-translate-y-0.5 hover:border-(--color-accent) hover:bg-(--color-surface-hover)"
           >
             <div class="flex items-center justify-between gap-3">
               <h3 class="text-xl font-semibold">{service.name}</h3>
@@ -80,12 +140,66 @@ const services = [
                 {service.badge}
               </span>
             </div>
-            <p class="mt-2 text-sm leading-relaxed text-(--color-muted)">
+            <p class="mt-3 min-h-12 text-sm leading-relaxed text-(--color-muted)">
               {service.description}
+            </p>
+            <p class="mt-5 text-sm font-medium text-(--color-accent)">
+              {service.action} →
             </p>
           </a>
         ))
       }
+    </div>
+  </section>
+
+  <section class="grid gap-4 py-10 lg:grid-cols-2">
+    <div class="rounded-2xl border border-(--color-border) bg-(--color-surface)/35 p-6 hover:border-(--color-accent) transition">
+      <p class="text-xs font-bold uppercase tracking-[0.22em] text-(--color-accent)">
+        Federated Search
+      </p>
+      <h2 class="mt-3 text-2xl font-semibold">Find answers across the stack.</h2>
+      <p class="mt-3 text-sm leading-6 text-(--color-muted)">
+        The `/search` route dynamically queries NodeBB, MediaWiki, Ghost, and Saleor APIs in parallel. Results are unified and presented instantly with source badges.
+      </p>
+      <a
+        href="/search"
+        class="mt-5 inline-flex rounded-md border border-(--color-border) px-4 py-2 text-sm font-medium text-(--color-text) transition hover:bg-(--color-surface) hover:text-(--color-accent)"
+      >
+        Try Federated Search
+      </a>
+    </div>
+
+    <div class="rounded-2xl border border-(--color-border) bg-(--color-surface)/35 p-6 hover:border-(--color-accent) transition">
+      <p class="text-xs font-bold uppercase tracking-[0.22em] text-(--color-accent)">
+        SSO & Permissions
+      </p>
+      <h2 class="mt-3 text-2xl font-semibold">One account for every service.</h2>
+      <p class="mt-3 text-sm leading-6 text-(--color-muted)">
+        The `/account` route provides an interactive Keycloak OIDC claim inspector and localized permission simulator. Test Global Admin vs. subsite-scoped role inheritance instantly.
+      </p>
+      <a
+        href="/account"
+        class="mt-5 inline-flex rounded-md border border-(--color-border) px-4 py-2 text-sm font-medium text-(--color-text) transition hover:bg-(--color-surface) hover:text-(--color-accent)"
+      >
+        Explore SSO Switchboard
+      </a>
+    </div>
+  </section>
+
+  <section class="py-10">
+    <div class="rounded-2xl border border-(--color-border) bg-(--color-surface)/55 p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.22em] text-(--color-accent)">
+        What this shell will organize
+      </p>
+      <div class="mt-5 grid gap-3 sm:grid-cols-2">
+        {
+          highlights.map((highlight) => (
+            <div class="rounded-xl border border-(--color-border) bg-(--color-bg)/50 p-4 text-sm text-(--color-text)">
+              {highlight}
+            </div>
+          ))
+        }
+      </div>
     </div>
   </section>
 </Layout>

@@ -14,7 +14,7 @@ This document describes the target architecture for the Stagea community platfor
 
 | Subdomain | Service | Upstream | Repo path | State |
 | --- | --- | --- | --- | --- |
-| `app.stagea-stuff.com` | Astro shell (global nav, auth-aware chrome) | Astro 6 + Tailwind 4 (in-house) | `shell/` | Scaffolded (frontend only; search + login deferred) |
+| `app.stagea-stuff.com` | Astro shell (global nav, auth-aware chrome) | Astro 6 + Tailwind 4 (in-house) | `shell/` | Active (SSR core, Federated Search engine, Scoped Auth Dashboard & Simulator) |
 | `forum.stagea-stuff.com` | NodeBB | `github.com/NodeBB/NodeBB` | `forum/` | Implemented (submodule, `master`, pinned to `ac8bad8`) |
 | `wiki.stagea-stuff.com` | MediaWiki | `github.com/wikimedia/mediawiki` | `wiki/` | Implemented (submodule, `master`, pinned to `a0a8c14`) |
 | `blog.stagea-stuff.com` | Ghost | `github.com/TryGhost/Ghost` | `blog/` | Implemented (submodule, `main`, pinned to `06b62ae2`) |
@@ -70,7 +70,7 @@ stagea-stuff/
 
 Current vs target:
 
-- **Implemented today**: `forum/`, `wiki/`, `blog/`, `shop/`, `docs/`, `.cursor/skills/`, `skills-lock.json`, `.gitmodules`.
+- **Implemented today**: `shell/` (SSR engine, Federated Search, and SSO dashboard active), `forum/`, `wiki/`, `blog/`, `shop/`, `docs/` (including our dedicated [Shell Design Reference](./shell/)), `.cursor/skills/`, `skills-lock.json`, `.gitmodules`.
 - **Not yet scaffolded**: `apps/`, `services/`, `packages/`, `infra/`, `turbo.json`, `pnpm-workspace.yaml`, root `package.json`. The placeholder directories `auth/`, `parts/`, `services/`, `infra/`, and `packages/` are currently empty.
 
 ## 5. Shell (Global Wrapper)
@@ -95,3 +95,15 @@ Considered and rejected:
 - Native mobile apps. A PWA from the shell is sufficient until forum traffic warrants otherwise.
 - Payments infrastructure beyond what Saleor ships. Stripe is configured inside Saleor, not at the shell level.
 - Email delivery service selection. Defer until `auth/` and `blog/` are both live; Ghost already supports Mailgun via `compose.dev.mailgun.yaml`.
+
+## 7. Architecture & Compliance Documentation
+
+The Stagea platform enforces rigorous system quality controls and 12-factor operations. Refer to these live-updated design assets for our shell engineering standards:
+
+* 📄 **[Executive Architecture & Quality Report](./EXECUTIVE_AUDIT_REPORT.md)** — Our centralized executive findings, software readiness grades, and prioritized improvement roadmap.
+* 📄 **[Documentation & Archiving Guide](./DOCUMENTATION_GUIDE.md)** — Standards for preventing documentation rot, technical terminology drift, and the operations blueprint for the Archiving program.
+* 📄 **[System-Wide 12-Factor Compliance](./12_factor_compliance.md)** — Audit of how Stagea maps all twelve factors from 12factor.net to our monorepo architecture.
+* 📄 **[Shell 12-Factor Implementation Plan](./shell/12_FACTOR_PLAN.md)** — Independent 12-factor scorecard and action plan specifically for the Astro Shell gateway.
+* 📄 **[Shell Code Readiness Ratings](./shell/READINESS_RATING.md)** — Per-file quality audit, strict type-safety scorecards, and engineering pathways for all shell code.
+* 📄 **[Shell Scoped Auth Plan](./shell/auth_plan.md)** — Centralized authentication, Keycloak clients, and role hierarchy mappings.
+* 📄 **[Shell Sprint Backlog & TODO](./shell/TODO.md)** — Active list of vertical development slices, MVP goals, and the 6-Step Feature Loop.
