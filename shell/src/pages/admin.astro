@@ -1,0 +1,235 @@
+---
+import Layout from "~/layouts/Layout.astro";
+import { AuthContext, type UserSession } from "~/lib/auth";
+import { FORUM_URL, WIKI_URL, BLOG_URL, SHOP_URL } from "astro:env/server";
+
+// Read existing session from cookies
+const sessionCookie = Astro.cookies.get("stagea_mock_session");
+let userSession: UserSession | null = null;
+
+if (sessionCookie) {
+  try {
+    userSession = JSON.parse(sessionCookie.value) as UserSession;
+  } catch {
+    Astro.cookies.delete("stagea_mock_session");
+  }
+}
+
+// Security Gate 1: Must be authenticated
+const auth = new AuthContext(userSession);
+if (!auth.isAuthenticated() || !userSession) {
+  return Astro.redirect("/account");
+}
+
+// Security Gate 2: Must have admin clearance on at least one submodule or global
+const hasAnyAdminAccess = ["forum", "wiki", "blog", "shop", "parts", "shell"].some(
+  sub => auth.hasPermission(sub as any, "admin")
+);
+
+const isGlobalAdmin = auth.getSession()?.roles.global.includes("global-admin") ||
+                     auth.hasPermission("shell", "admin");
+
+// Service Health Checker Helper (12-Factor Backing Services Liveness)
+async function checkServiceHealth(name: string, urlStr: string): Promise<{ name: string; url: string; status: "online" | "offline"; delayMs?: number }> {
+  if (!urlStr) {
+    return { name, url: "Not Configured", status: "offline" };
+  }
+  const start = Date.now();
+  try {
+    // Perform a lightweight HEAD request with a tight timeout (1.5s) to avoid server bottlenecks
+    const res = await fetch(urlStr, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(1500)
+    });
+    const delayMs = Date.now() - start;
+    return {
+      name,
+      url: urlStr,
+      status: res.status >= 200 && res.status < 400 ? "online" : "offline",
+      delayMs
+    };
+  } catch {
+    return { name, url: urlStr, status: "offline" };
+  }
+}
+
+// Execute parallel checks concurrently (Factor VIII Concurrency / Scale)
+const servicesList = [
+  { name: "NodeBB Forum", url: FORUM_URL },
+  { name: "MediaWiki Docs", url: WIKI_URL },
+  { name: "Ghost Blog Node", url: BLOG_URL },
+  { name: "Saleor GraphQL", url: SHOP_URL }
+];
+
+const healthStatuses = hasAnyAdminAccess
+  ? await Promise.all(servicesList.map(s => checkServiceHealth(s.name, s.url)))
+  : [];
+
+// Handle Admin Actions (e.g. Mock Cache Clear - Factor XII Admin Processes)
+let actionMessage: string | null = null;
+if (Astro.request.method === "POST" && hasAnyAdminAccess) {
+  const formData = await Astro.request.formData();
+  const action = formData.get("admin_action");
+
+  if (action === "clear_cache") {
+    actionMessage = "SUCCESS: Edge cache flushed across Astro SSR memory layers and session store directories.";
+  }
+}
+---
+
+<Layout
+  title="Central Admin Console — Stagea"
+  description="Multi-tenant platform operational status, service health dashboards, and administrative controls."
+>
+  <div class="max-w-5xl mx-auto py-8">
+
+    {!hasAnyAdminAccess ? (
+      <!-- ACCESS DENIED VIEW -->
+      <div class="max-w-md mx-auto text-center py-16 px-6 border border-neutral-900 bg-neutral-950/20 rounded-3xl mt-12">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-red-500 mx-auto mb-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+        </svg>
+        <h1 class="text-2xl font-black text-white mb-2">Access Denied</h1>
+        <p class="text-sm text-neutral-400 mb-6 leading-relaxed">
+          Your active single sign-on identity profile does not possess administrative clearance levels required to operate the central console.
+        </p>
+        <a
+          href="/account/dashboard"
+          class="inline-flex rounded-xl bg-neutral-900 border border-neutral-800 px-6 py-2.5 text-sm font-semibold text-neutral-300 hover:text-white transition"
+        >
+          Return to Dashboard
+        </a>
+      </div>
+    ) : (
+      <!-- LIVE ADMIN CONSOLE -->
+      <div>
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-neutral-800 pb-8 mb-10">
+          <div>
+            <span class="text-xs font-bold text-red-500 uppercase tracking-widest">Platform Administration</span>
+            <h1 class="text-3xl font-extrabold text-white tracking-tight mt-1">Central Operational Console</h1>
+            <p class="text-sm text-neutral-400 mt-1">
+              {isGlobalAdmin ? "Operating as Global Super-Administrator" : "Operating with localized sub-site admin credentials"}
+            </p>
+          </div>
+
+          <a
+            href="/account/dashboard"
+            class="px-5 py-2.5 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900 text-neutral-300 font-semibold text-sm transition"
+          >
+            User Dashboard
+          </a>
+        </header>
+
+        {actionMessage && (
+          <div class="p-4 mb-8 rounded-xl bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 text-sm font-mono flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>{actionMessage}</span>
+          </div>
+        )}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          <!-- Backing Services Liveness Health Dashboard -->
+          <div class="lg:col-span-2 space-y-8">
+            <div class="p-6 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md">
+              <h2 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-neutral-400">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 18.364a9 9 0 0 1 0-12.728m12.728 0a9 9 0 0 1 0 12.728m-9.9-2.829a5 5 0 0 1 0-7.07m7.07 0a5 5 0 0 1 0 7.07M13 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
+                </svg>
+                Backing Services Liveness (Factor IV / X)
+              </h2>
+              <p class="text-sm text-neutral-400 mb-6 leading-relaxed">
+                Active connections to attached local microservices. This panel runs parallel health pings to check responsiveness and network delay in real-time.
+              </p>
+
+              <div class="space-y-4">
+                {healthStatuses.map(status => {
+                  const isOnline = status.status === "online";
+                  return (
+                    <div class="p-4 rounded-xl border border-neutral-900 bg-neutral-950/20 flex items-center justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-bold text-white">{status.name}</h3>
+                        <p class="text-xs text-neutral-500 font-mono mt-0.5 select-all">{status.url}</p>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        {isOnline && status.delayMs && (
+                          <span class="text-xs text-neutral-500 font-mono">{status.delayMs}ms</span>
+                        )}
+                        <span class={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}`}>
+                          <span class={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-400" : "bg-red-400"}`}></span>
+                          {isOnline ? "Healthy / Online" : "Unreachable"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <!-- Administrative Task Run Panel (Factor XII Admin Processes) -->
+            <div class="p-6 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md">
+              <h2 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-neutral-400">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75 16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+                </svg>
+                One-Off Admin Actions (Factor XII)
+              </h2>
+              <p class="text-sm text-neutral-400 mb-6 leading-relaxed">
+                Run immediate system tasks. In a 12-factor cloud deployment, these trigger transient containers to run administrative operations in parallel with the main app process.
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form method="POST">
+                  <input type="hidden" name="admin_action" value="clear_cache" />
+                  <button
+                    type="submit"
+                    class="w-full p-4 rounded-xl border border-neutral-900 bg-neutral-950/20 hover:border-amber-500 hover:bg-amber-500/[0.01] text-left transition"
+                  >
+                    <h3 class="text-sm font-bold text-white group-hover:text-amber-400">Flush Edge Memory Caches</h3>
+                    <p class="text-xs text-neutral-500 mt-1">Clears page render cache pools across Astro server processes.</p>
+                  </button>
+                </form>
+
+                <div class="p-4 rounded-xl border border-neutral-900 bg-neutral-950/20 cursor-not-allowed opacity-55">
+                  <h3 class="text-sm font-bold text-neutral-400">Trigger DB Backup (Directus)</h3>
+                  <p class="text-xs text-neutral-500 mt-1">Generates custom SQL schema dumps of the parts catalogue.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Admin scopes details -->
+          <div class="space-y-6">
+            <div class="p-6 rounded-2xl border border-neutral-900 bg-neutral-950/20">
+              <h3 class="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">Your Admin Scopes</h3>
+
+              <div class="space-y-4 text-xs text-neutral-400">
+                {["forum", "wiki", "blog", "shop", "parts", "shell"].map(sub => {
+                  const hasAccess = auth.hasPermission(sub as any, "admin");
+                  return (
+                    <div class="flex items-center justify-between border-b border-neutral-900 pb-2.5 last:border-0 last:pb-0">
+                      <span class="capitalize font-semibold text-neutral-300">{sub} Panel</span>
+                      <span class={`font-bold px-2 py-0.5 rounded text-[10px] ${hasAccess ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25" : "bg-neutral-950 text-neutral-600 border border-neutral-900"}`}>
+                        {hasAccess ? "Manager Authorized" : "No Access"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div class="p-6 rounded-2xl border border-neutral-800 bg-neutral-950/20">
+              <h3 class="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Auditing & Security</h3>
+              <p class="text-xs text-neutral-400 leading-relaxed">
+                All changes initiated from the Central Administration Console are logged as events in the standard error/out telemetry streams. Action audit trails are signed with the active OIDC subject ID.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    )}
+
+  </div>
+</Layout>

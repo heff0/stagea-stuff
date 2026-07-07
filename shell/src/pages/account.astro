@@ -1,24 +1,269 @@
 ---
 import Layout from "~/layouts/Layout.astro";
+import { AuthContext, parseTokenPermissions, type UserSession, type KeycloakToken } from "~/lib/auth";
+
+// Read existing session from cookies (12-factor stateless cookie session model)
+const sessionCookie = Astro.cookies.get("stagea_mock_session");
+let userSession: UserSession | null = null;
+
+if (sessionCookie) {
+  try {
+    userSession = JSON.parse(sessionCookie.value) as UserSession;
+    // Auto-redirect to dashboard if session is already active (12-factor session routing)
+    return Astro.redirect("/account/dashboard");
+  } catch {
+    Astro.cookies.delete("stagea_mock_session");
+  }
+}
+
+// Handle Form Submissions (Login, Logout, Role switching)
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+
+  if (action === "logout") {
+    Astro.cookies.delete("stagea_mock_session", { path: "/" });
+    return Astro.redirect("/account");
+  }
+
+  if (action === "login_simulated") {
+    const roleType = formData.get("role_type")?.toString() || "guest";
+
+    let mockTokenData: KeycloakToken = {
+      sub: "usr_mock_12345",
+      email: "developer@stagea-stuff.com",
+      preferred_username: "stagea_dev",
+      name: "Stagea Developer",
+      realm_access: { roles: ["offline_access", "uma_authorization"] },
+      resource_access: {},
+      groups: []
+    };
+
+    if (roleType === "global_admin") {
+      mockTokenData.name = "Global Administrator";
+      mockTokenData.preferred_username = "super_admin";
+      mockTokenData.realm_access!.roles.push("global-admin");
+      mockTokenData.groups!.push("global-admins");
+    } else if (roleType === "forum_admin") {
+      mockTokenData.name = "Forum Manager";
+      mockTokenData.preferred_username = "forum_boss";
+      mockTokenData.groups!.push("forum-admins");
+      mockTokenData.resource_access!["forum-client"] = { roles: ["admin", "moderator"] };
+    } else if (roleType === "wiki_editor") {
+      mockTokenData.name = "Wiki Documentarian";
+      mockTokenData.preferred_username = "wiki_scribe";
+      mockTokenData.groups!.push("wiki-admins");
+      mockTokenData.resource_access!["wiki-client"] = { roles: ["editor"] };
+    } else {
+      mockTokenData.name = "Standard Member";
+      mockTokenData.preferred_username = "racer_x";
+    }
+
+    const session = parseTokenPermissions(mockTokenData, "mock_jwt_token_payload");
+    Astro.cookies.set("stagea_mock_session", JSON.stringify(session), {
+      path: "/",
+      httpOnly: true,
+      secure: false, // development
+      sameSite: "lax",
+      maxAge: 3600 // 1 hour
+    });
+
+    // Redirect to the dynamic user dashboard
+    return Astro.redirect("/account/dashboard");
+  }
+}
+
+const auth = new AuthContext(userSession);
+const session = auth.getSession();
 ---
 
 <Layout
-  title="Account — Stagea"
-  description="Single sign-on across every Stagea service. Not yet available."
+  title="SSO Account Management — Stagea"
+  description="Identity self-service, OIDC token inspection, and submodule scoped permissions management."
 >
-  <section class="py-16">
-    <h1 class="text-3xl font-bold tracking-tight">Account</h1>
-    <p class="mt-3 max-w-2xl text-(--color-muted)">
-      Single sign-on across forum, wiki, blog, and shop. Will exchange an OIDC
-      session from Keycloak (planned <code>auth/</code> service) for a signed
-      header that downstream services trust.
-    </p>
+  <div class="max-w-4xl mx-auto py-8">
+    <header class="mb-10 text-center">
+      <h1 class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
+        Single Sign-On Dashboard
+      </h1>
+      <p class="mt-2 text-neutral-400 max-w-xl mx-auto">
+        Verify identity claims, inspect OIDC scopes, and test multi-tenant administrative permissions across our attached submodules.
+      </p>
+    </header>
 
-    <div
-      class="mt-10 rounded-xl border border-dashed border-(--color-border) bg-(--color-surface)/30 p-10 text-center text-sm text-(--color-muted)"
-    >
-      Not implemented yet. The route exists so the navbar's "Sign in" link
-      resolves; the login flow lands when <code>auth/</code> is scaffolded.
-    </div>
-  </section>
+    {auth.isAuthenticated() && session ? (
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+        <!-- User Profile Card -->
+        <div class="md:col-span-1 space-y-6">
+          <div class="p-6 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-neutral-950 text-2xl font-black mb-4 mx-auto shadow-lg shadow-amber-500/10">
+              {session.displayName.substring(0, 2).toUpperCase()}
+            </div>
+            <h2 class="text-xl font-bold text-white text-center leading-snug">{session.displayName}</h2>
+            <p class="text-xs text-neutral-500 text-center mt-1">@{session.username}</p>
+            <p class="text-sm text-neutral-400 text-center mt-3 break-all">{session.email}</p>
+            <div class="mt-4 border-t border-neutral-900 pt-4 text-center">
+              <span class="inline-block text-[10px] font-mono bg-neutral-900 border border-neutral-800 text-neutral-400 rounded px-2 py-0.5 uppercase tracking-wide">
+                User ID: {session.userId}
+              </span>
+            </div>
+
+            <form method="POST" class="mt-6">
+              <input type="hidden" name="action" value="logout" />
+              <button
+                type="submit"
+                class="w-full py-2 px-4 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold text-sm transition"
+              >
+                Sign Out / Terminate Session
+              </button>
+            </form>
+          </div>
+
+          <div class="p-5 rounded-2xl border border-neutral-900 bg-neutral-950/20">
+            <h3 class="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">12-Factor Verification</h3>
+            <ul class="text-xs text-neutral-400 space-y-2 leading-relaxed">
+              <li class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Stateless Cookie Sessions</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Dynamic Environment Binding</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>JWT Claim Isolation</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Permissions Resolver Console -->
+        <div class="md:col-span-2 space-y-6">
+          <div class="p-6 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-amber-500">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.959 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+              </svg>
+              Resolved Scoped Permissions
+            </h2>
+            <p class="text-sm text-neutral-400 mb-6">
+              The table below displays the dynamically resolved authorization clearance computed for your identity. These scopes determine administrative routing privileges on staging.
+            </p>
+
+            <div class="space-y-4">
+              {[
+                { name: "Forum Subsite", key: "forum", desc: "Access NodeBB Admin Panel and Moderation queues" },
+                { name: "Wiki Subsite", key: "wiki", desc: "Manage Page Locks, edit core templates, and access SpecialPages" },
+                { name: "Blog Subsite", key: "blog", desc: "Write, review, publish blog articles, and add authors" },
+                { name: "Shop Storefront", key: "shop", desc: "Access Saleor dashboard, edit catalogs, and view sales metrics" },
+                { name: "Parts Catalogue", key: "parts", desc: "Edit core Directus collection schemas and parts details" }
+              ].map(sub => {
+                const isAdmin = auth.hasPermission(sub.key as any, "admin");
+                const isEditor = auth.hasPermission(sub.key as any, "editor");
+
+                let badgeClass = "bg-neutral-900 border-neutral-800 text-neutral-500";
+                let badgeLabel = "Regular Guest";
+
+                if (isAdmin) {
+                  badgeClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                  badgeLabel = "Admin / Administrator";
+                } else if (isEditor) {
+                  badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                  badgeLabel = "Editor / Writer";
+                } else {
+                  badgeClass = "bg-neutral-900 border-neutral-800 text-neutral-300";
+                  badgeLabel = "Authenticated User";
+                }
+
+                return (
+                  <div class="p-4 rounded-xl border border-neutral-900 bg-neutral-950/20 flex items-center justify-between gap-4">
+                    <div>
+                      <h3 class="text-sm font-bold text-white">{sub.name}</h3>
+                      <p class="text-xs text-neutral-500 mt-0.5">{sub.desc}</p>
+                    </div>
+                    <span class={`px-2.5 py-1 text-xs font-semibold rounded-lg border ${badgeClass}`}>
+                      {badgeLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <!-- Simulated Token Inspector -->
+          <div class="p-6 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md">
+            <h2 class="text-sm font-bold text-neutral-400 uppercase tracking-widest mb-3">JWT Session payload</h2>
+            <pre class="p-4 rounded-xl bg-neutral-950 border border-neutral-900 text-[11px] font-mono text-neutral-400 overflow-x-auto leading-relaxed">{JSON.stringify(session, null, 2)}</pre>
+          </div>
+        </div>
+
+      </div>
+    ) : (
+      <!-- Logged Out / Identity Switchboard -->
+      <div class="max-w-xl mx-auto p-8 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md">
+        <h2 class="text-2xl font-bold text-white mb-2 text-center">Local Authentication Hub</h2>
+        <p class="text-sm text-neutral-400 text-center mb-8">
+          Select a mock OIDC identity profile below to verify how user permissions are computed, mapped, and inherited across our submodules in dev/staging.
+        </p>
+
+        <form method="POST" class="space-y-4">
+          <input type="hidden" name="action" value="login_simulated" />
+
+          <button
+            type="submit"
+            name="role_type"
+            value="global_admin"
+            class="w-full p-4 rounded-xl border border-neutral-800 hover:border-amber-500 bg-neutral-900/50 hover:bg-amber-500/[0.02] text-left transition flex items-center justify-between group"
+          >
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-amber-400 transition">Global Administrator</h3>
+              <p class="text-xs text-neutral-500 mt-1">Simulate `global-admins` group membership. Inherits full administrative rights on every submodule.</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-red-500/10 text-red-400 border border-red-500/20">Inherited</span>
+          </button>
+
+          <button
+            type="submit"
+            name="role_type"
+            value="forum_admin"
+            class="w-full p-4 rounded-xl border border-neutral-800 hover:border-amber-500 bg-neutral-900/50 hover:bg-amber-500/[0.02] text-left transition flex items-center justify-between group"
+          >
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-amber-400 transition">Forum Manager</h3>
+              <p class="text-xs text-neutral-500 mt-1">Simulate scoped client-level admin permissions. Has full control of the Forum, regular user elsewhere.</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Forum Only</span>
+          </button>
+
+          <button
+            type="submit"
+            name="role_type"
+            value="wiki_editor"
+            class="w-full p-4 rounded-xl border border-neutral-800 hover:border-amber-500 bg-neutral-900/50 hover:bg-amber-500/[0.02] text-left transition flex items-center justify-between group"
+          >
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-amber-400 transition">Wiki Documentarian</h3>
+              <p class="text-xs text-neutral-500 mt-1">Simulate `wiki-admins` group giving `editor` permission on Wiki pages. Regular user elsewhere.</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Wiki Only</span>
+          </button>
+
+          <button
+            type="submit"
+            name="role_type"
+            value="regular_user"
+            class="w-full p-4 rounded-xl border border-neutral-800 hover:border-amber-500 bg-neutral-900/50 hover:bg-amber-500/[0.02] text-left transition flex items-center justify-between group"
+          >
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-amber-400 transition">Standard Member</h3>
+              <p class="text-xs text-neutral-500 mt-1">Authenticated user with default OIDC claims. Normal access across the entire platform.</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-neutral-800 text-neutral-400 border border-neutral-700">Member</span>
+          </button>
+        </form>
+      </div>
+    )}
+  </div>
 </Layout>
