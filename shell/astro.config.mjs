@@ -17,8 +17,9 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  // Environment contract. Add real entries when login/search land; for now
-  // the placeholder PUBLIC_SITE_NAME proves the schema works end-to-end.
+  // Environment contract. Declared variables are strictly typed and validated.
+  // Using defaults for local dev lets the app start up with zero config, while
+  // staging/production overrides can be injected via the environment (12-factor).
   env: {
     schema: {
       PUBLIC_SITE_NAME: envField.string({
@@ -26,11 +27,51 @@ export default defineConfig({
         access: "public",
         default: "Stagea",
       }),
-      // Future entries (kept here as documentation, commented out until used):
-      //   AUTH_ISSUER_URL: envField.string({ context: "server", access: "secret" }),
-      //   AUTH_CLIENT_ID:  envField.string({ context: "server", access: "public" }),
-      //   AUTH_CLIENT_SECRET: envField.string({ context: "server", access: "secret" }),
-      //   SEARCH_API_URL:  envField.string({ context: "server", access: "public" }),
+      AUTH_ISSUER_URL: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      AUTH_CLIENT_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      AUTH_CLIENT_SECRET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      FORUM_URL: envField.string({
+        context: "server",
+        access: "public",
+        default: "http://localhost:4567/",
+      }),
+      WIKI_URL: envField.string({
+        context: "server",
+        access: "public",
+        default: "http://localhost:8080/w/",
+      }),
+      BLOG_URL: envField.string({
+        context: "server",
+        access: "public",
+        default: "http://localhost:2368/",
+      }),
+      SHOP_URL: envField.string({
+        context: "server",
+        access: "public",
+        default: "http://localhost:3000/",
+      }),
+      PARTS_API_URL: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      SEARCH_API_URL: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
     },
   },
 });

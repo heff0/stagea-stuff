@@ -1,14 +1,14 @@
 ---
 // Top-of-page navigation. Lives in src/layouts/Layout.astro so every route
-// renders it without extra wiring. When the shell starts proxying the
-// upstream services under app.stagea-stuff.com paths, swap the absolute
-// localhost URLs below for /forum, /wiki, /blog, /shop.
+// renders it without extra wiring.
+
+import { FORUM_URL, WIKI_URL, BLOG_URL, SHOP_URL } from "astro:env/server";
 
 const services = [
-  { name: "Forum", href: "http://localhost:4567/" },
-  { name: "Wiki", href: "http://localhost:8080/w/" },
-  { name: "Blog", href: "http://localhost:2368/" },
-  { name: "Shop", href: "http://localhost:3000/" },
+  { name: "Forum", href: FORUM_URL },
+  { name: "Wiki", href: WIKI_URL },
+  { name: "Blog", href: BLOG_URL },
+  { name: "Shop", href: SHOP_URL },
 ];
 
 const path = Astro.url.pathname;
