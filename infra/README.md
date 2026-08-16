@@ -2,7 +2,123 @@
 
 Stagea-monorepo infrastructure glue. Lives in the parent repo so it can be edited and committed without touching any submodule.
 
-## Files
+## Production Compose (Phase 1)
+
+Production is **one** Compose file, **one** Caddy container on host ports `80`/`443`, and every other process on the internal `stagea-net` network. Only the **Astro Shell** is built from this repository. **Submodules** (`forum/`, `wiki/`, `blog/`, `shop/`) are not cloned, built, or bind-mounted in production — those services run official upstream images.
+
+Service map, named volumes, and phases: [production_plan.md §3](../docs/deployment/production_plan.md#3-service-map).
+
+Apex is the Shell now (`https://stagea-stuff.com` → `shell:4321`). `infra/caddy/placeholder.html` is leftover from the edge-skeleton slice and is unused by Caddy.
+
+### Image pins (confirmed 2026-08-16)
+
+| Service | Image | Notes |
+| :--- | :--- | :--- |
+| `caddy` | `caddy:2.10-alpine` | Docker Hub. Admin API health on `:2019` is not published to the host. |
+| `shell` | `stagea-shell:local` (`build: ../shell`) | Only repo-built image. GHCR publish is slice 8. |
+| `forum` | `ghcr.io/nodebb/nodebb:4.15` | **`nodebb/docker:4.4` does not exist** on Docker Hub (no 4.x tags). Official images moved to GitHub Container Registry. Pin is the current 4.x minor (`v4.15.0`, 2026-08-12). |
+| `forum-redis` | `redis:7.4-alpine` | AOF + `requirepass`. Redis hostname is the Compose service name `forum-redis`. |
+| `wiki` | `mediawiki:1.43` | Official LTS. Serves at `/` (document root), not `/w/`. |
+| `wiki-db` | `mariadb:11.4` | Official LTS. No host port. |
+
+Never `:latest`. Never `docker compose down -v` (that deletes named volumes).
+
+### One command
+
+After one-time host setup ([slice 1](../docs/deployment/cards/slice_01_host_baseline.md)) and filling in `infra/.env`:
+
+```bash
+./infra/deploy.sh
+```
+
+From any cwd. The script resolves the repo root from its own path. It:
+
+1. Fails fast if `infra/.env` is missing, world-readable, more permissive than `0640`, or missing a required key (changes nothing).
+2. Fails fast if Docker is down or Compose v2 is missing.
+3. `git pull --ff-only` on the current branch.
+4. `docker compose -f infra/compose.yaml --env-file infra/.env pull`
+5. `docker compose -f infra/compose.yaml --env-file infra/.env up -d --remove-orphans`
+6. Waits until `caddy`, `shell`, `forum`, `forum-redis`, `wiki`, and `wiki-db` are `healthy` (default 120s; override with `DEPLOY_HEALTH_TIMEOUT`).
+7. Prints a summary table (service, health, image, public URL).
+8. Exits non-zero if anything is unhealthy — and does **not** `down` the stack.
+
+```bash
+./infra/deploy.sh --check          # preflight only; no git, pull, or up
+./infra/deploy.sh --skip-git-pull  # skip step 3 (pinned rollbacks)
+DEPLOY_HEALTH_TIMEOUT=300 ./infra/deploy.sh   # first-run NodeBB can exceed 120s
+```
+
+The one command does **not** provision hosts, edit DNS, generate secrets, run the NodeBB or MediaWiki installers, or migrate data.
+
+### Escape hatch
+
+If `deploy.sh` is missing, production still deploys:
+
+```bash
+docker compose -f infra/compose.yaml --env-file infra/.env up -d
+```
+
+Always from the **repository root**, with `-f infra/compose.yaml --env-file infra/.env`.
+
+Supporting commands (not part of the deploy path):
+
+```bash
+docker compose -f infra/compose.yaml --env-file infra/.env logs -f <service>
+docker compose -f infra/compose.yaml --env-file infra/.env ps
+```
+
+`./infra/backup.sh` / `./infra/restore.sh` are slice 7 — not here.
+
+### Secrets
+
+```bash
+cp infra/.env.example infra/.env
+# fill real values; openssl rand -base64 32 for passwords
+chmod 600 infra/.env
+```
+
+`infra/.env` is gitignored. `infra/.env.example` is the inventory and is tracked. Placeholders for `AUTH_*` and `GHOST_CONTENT_API_KEY` are required keys with dummy values — do **not** start Ghost, Saleor, the Keycloak OIDC IdP, or the Directus Parts API in Phase 1.
+
+### First-run: NodeBB wizard
+
+One-time, human. Open `https://forum.stagea-stuff.com` and complete the setup wizard.
+
+* Database type: **Redis**
+* Redis host: `forum-redis` (Compose service name, not `localhost`)
+* Redis port: `6379`
+* Redis password: `FORUM_REDIS_PASSWORD` from `infra/.env`
+* Public URL: `https://forum.stagea-stuff.com`
+
+Generated config is persisted in the `forum_data` volume (`/opt/config`). Uploads go to `forum_uploads`. Later `up` skips the wizard. See [production_plan.md §5.5](../docs/deployment/production_plan.md#55-per-application-bootstrap-one-time-interactive).
+
+### First-run: MediaWiki LocalSettings persist
+
+One-time, human. Open `https://wiki.stagea-stuff.com`, run the web installer.
+
+* Database host: `wiki-db`
+* Database name / user / password: `WIKI_DB_*` from `infra/.env`
+
+The official `mediawiki` image serves at **`/`**, not `/w/`. Production `WIKI_URL` is `https://wiki.stagea-stuff.com/`.
+
+`LocalSettings.php` is **not** in git. Named volume `wiki_config` is mounted at `/persist` (not over the docroot). A tiny entrypoint (`infra/wiki/docker-entrypoint.sh`) copies `/persist/LocalSettings.php` into `/var/www/html/LocalSettings.php` on start.
+
+After the installer download:
+
+```bash
+# from the repo root, with the downloaded file in the current directory
+docker compose -f infra/compose.yaml --env-file infra/.env cp ./LocalSettings.php wiki:/persist/LocalSettings.php
+docker compose -f infra/compose.yaml --env-file infra/.env restart wiki
+```
+
+Subsequent restarts pick the file up from `wiki_config`. Images persist in `wiki_images`.
+
+### Health
+
+`GET`/`HEAD` `https://stagea-stuff.com/healthz` returns `200` and `ok` (no auth). Every Phase 1 service has a Compose `healthcheck` so `deploy.sh` can wait.
+
+---
+
+## Local development (unchanged)
 
 ### `homepage/`
 
@@ -45,7 +161,3 @@ Use it instead of `cd blog && pnpm dev:sqlite` whenever you want Ghost to run al
 ./infra/blog-dev.sh dev            # MySQL variant
 ./infra/blog-dev.sh dev:mailgun    # Mailgun variant
 ```
-
-## Future
-
-The `site-plan.md` reserves this directory for the eventual root `compose.yaml`, per-edge `nginx/` configs, and TLS automation. As those land, document them here and update the README's "Repository Layout" table.

@@ -14,7 +14,9 @@ This document describes the target architecture for the Stagea community platfor
 
 | Subdomain | Service | Upstream | Repo path | State |
 | --- | --- | --- | --- | --- |
-| `app.stagea-stuff.com` | Astro shell (global nav, auth-aware chrome) | Astro 6 + Tailwind 4 (in-house) | `shell/` | Active (SSR core, Federated Search engine, Scoped Auth Dashboard & Simulator) |
+| `stagea-stuff.com` (apex) | Astro Shell / Shell Edge (global nav, auth-aware chrome) | Astro 6 + Tailwind 4 (in-house) | `shell/` | Active (SSR core, Federated Search engine, Scoped Auth Dashboard & Simulator). Production serves the Shell Edge on the apex. |
+| `www.stagea-stuff.com` | Permanent redirect → `https://stagea-stuff.com` | Caddy | n/a | Production redirect |
+| `app.stagea-stuff.com` | Permanent redirect → `https://stagea-stuff.com` | Caddy | n/a | Production redirect (legacy hostname; do not serve the Shell here) |
 | `forum.stagea-stuff.com` | NodeBB | `github.com/NodeBB/NodeBB` | `forum/` | Implemented (submodule, `master`, pinned to `ac8bad8`) |
 | `wiki.stagea-stuff.com` | MediaWiki | `github.com/wikimedia/mediawiki` | `wiki/` | Implemented (submodule, `master`, pinned to `a0a8c14`) |
 | `blog.stagea-stuff.com` | Ghost | `github.com/TryGhost/Ghost` | `blog/` | Implemented (submodule, `main`, pinned to `06b62ae2`) |
@@ -96,10 +98,22 @@ Considered and rejected:
 - Payments infrastructure beyond what Saleor ships. Stripe is configured inside Saleor, not at the shell level.
 - Email delivery service selection. Defer until `auth/` and `blog/` are both live; Ghost already supports Mailgun via `compose.dev.mailgun.yaml`.
 
-## 7. Architecture & Compliance Documentation
+## 7. Production Deployment
+
+The target architecture above describes *what* runs. How it reaches `stagea-stuff.com` is specified separately in the **[Production Deployment Plan](./deployment/production_plan.md)**. The operator copy-paste runbook is **[GO_LIVE.md](./deployment/GO_LIVE.md)**.
+
+In brief: one Linux VPS, one `infra/compose.yaml`, and Caddy terminating TLS on ports `80`/`443` with every other container private to an internal Compose network. Only the Astro Shell is built from this repository — the **Submodules** run official upstream images in production. Go-live is phased (apex + forum + wiki, then blog, then shop and the Keycloak OIDC IdP), and after one-time host setup, production spin-up is a single command.
+
+Do not duplicate the deployment specification here; the plan is the source of truth for phases, host setup, the one-command contract, and backup/restore. Follow [GO_LIVE.md](./deployment/GO_LIVE.md) on the host.
+
+---
+
+## 8. Architecture & Compliance Documentation
 
 The Stagea platform enforces rigorous system quality controls and 12-factor operations. Refer to these live-updated design assets for our shell engineering standards:
 
+* 📄 **[Production Spin-Up Runbook](./deployment/GO_LIVE.md)** — Operator copy-paste checklist to bring `stagea-stuff.com` online.
+* 📄 **[Production Deployment Plan](./deployment/production_plan.md)** — VPS + Docker Compose + Caddy go-live plan, phased service map, one-command deploy contract, and backup/restore minimum.
 * 📄 **[Executive Architecture & Quality Report](./EXECUTIVE_AUDIT_REPORT.md)** — Our centralized executive findings, software readiness grades, and prioritized improvement roadmap.
 * 📄 **[Documentation & Archiving Guide](./DOCUMENTATION_GUIDE.md)** — Standards for preventing documentation rot, technical terminology drift, and the operations blueprint for the Archiving program.
 * 📄 **[System-Wide 12-Factor Compliance](./12_factor_compliance.md)** — Audit of how Stagea maps all twelve factors from 12factor.net to our monorepo architecture.

@@ -1,0 +1,28 @@
+{
+	email {$ACME_EMAIL}
+	# First run: uncomment the next line, obtain certs, then comment it and reload
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+stagea-stuff.com {
+	reverse_proxy shell:4321
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+}
+
+www.stagea-stuff.com {
+	redir https://stagea-stuff.com{uri} permanent
+}
+
+app.stagea-stuff.com {
+	redir https://stagea-stuff.com{uri} permanent
+}
+
+forum.stagea-stuff.com {
+	reverse_proxy forum:4567
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+}
+
+wiki.stagea-stuff.com {
+	reverse_proxy wiki:80
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+}

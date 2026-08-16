@@ -16,6 +16,8 @@ stagea-stuff/
     ├── shell/                  # Astro Shell specific designs, auth plans, and backlogs
     │   └── cards/              # active Sprint PRD Cards (strictly active sprint items)
     ├── deployment/             # installation, setups, and troubleshooting checklists
+    │   ├── GO_LIVE.md          # operator production spin-up runbook
+    │   └── cards/              # production go-live vertical-slice sprint cards
     ├── archive/                # Retired blueprints, completed PRD cards, and expired plans
     │   ├── shell/              # Archived shell documents
     │   └── services/           # Archived microservice documents

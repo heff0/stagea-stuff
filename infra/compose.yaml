@@ -1,0 +1,184 @@
+# Production Compose for stagea-stuff.com (Phase 1).
+# Invoke from the repository root:
+#   docker compose -f infra/compose.yaml --env-file infra/.env up -d
+# Only Caddy publishes host ports (80/443). Everything else is internal.
+
+name: stagea
+
+networks:
+  stagea-net:
+    driver: bridge
+    # internal: false — Caddy must reach the public internet for ACME.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      shell:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [stagea-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    logging: *default-logging
+
+  shell:
+    build:
+      context: ../shell
+      dockerfile: Dockerfile
+    image: stagea-shell:local
+    restart: unless-stopped
+    expose:
+      - "4321"
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      HOST: ${HOST}
+      PORT: ${PORT}
+      PUBLIC_SITE_NAME: ${PUBLIC_SITE_NAME}
+      FORUM_URL: ${FORUM_URL}
+      WIKI_URL: ${WIKI_URL}
+      BLOG_URL: ${BLOG_URL}
+      SHOP_URL: ${SHOP_URL}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL}
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      GHOST_CONTENT_API_KEY: ${GHOST_CONTENT_API_KEY}
+    env_file:
+      - path: .env
+        required: false
+    networks: [stagea-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4321/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 25s
+    logging: *default-logging
+
+  forum-redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${FORUM_REDIS_PASSWORD}"]
+    expose: ["6379"]
+    volumes:
+      - forum_redis_data:/data
+    networks: [stagea-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${FORUM_REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+  forum:
+    # nodebb/docker:4.4 does not exist on Docker Hub (no 4.x tags). Official
+    # images moved to GHCR; pin current 4.x minor. See infra/README.md.
+    image: ghcr.io/nodebb/nodebb:4.15
+    restart: unless-stopped
+    depends_on:
+      forum-redis:
+        condition: service_healthy
+    expose: ["4567"]
+    environment:
+      url: ${FORUM_URL}
+      database: redis
+      redis__host: forum-redis
+      redis__port: "6379"
+      redis__password: ${FORUM_REDIS_PASSWORD}
+    volumes:
+      - forum_data:/opt/config
+      - forum_uploads:/usr/src/app/public/uploads
+    networks: [stagea-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4567').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging: *default-logging
+
+  wiki-db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${WIKI_DB_NAME}
+      MARIADB_USER: ${WIKI_DB_USER}
+      MARIADB_PASSWORD: ${WIKI_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${WIKI_DB_ROOT_PASSWORD}
+    expose: ["3306"]
+    volumes:
+      - wiki_db_data:/var/lib/mysql
+    networks: [stagea-net]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+
+  wiki:
+    image: mediawiki:1.43
+    restart: unless-stopped
+    depends_on:
+      wiki-db:
+        condition: service_healthy
+    expose: ["80"]
+    entrypoint: ["/bin/sh", "/stagea-wiki-entrypoint.sh"]
+    command: ["apache2-foreground"]
+    volumes:
+      - wiki_images:/var/www/html/images
+      - wiki_config:/persist
+      - ./wiki/docker-entrypoint.sh:/stagea-wiki-entrypoint.sh:ro
+    networks: [stagea-net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    logging: *default-logging
+
+volumes:
+  caddy_data:
+  caddy_config:
+  forum_data:
+  forum_uploads:
+  forum_redis_data:
+  wiki_images:
+  wiki_config:
+  wiki_db_data:

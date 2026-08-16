@@ -4,6 +4,27 @@ This document is the master entry point for deploying, orchestrating, and operat
 
 ---
 
+## 0. Local Development vs Production — Read This First
+
+The Stagea platform has **two distinct deployment targets**, and they share almost no operational details. Confirm which one you are working on before following any instructions below.
+
+| | Local Development (this document) | Production (`stagea-stuff.com`) |
+| :--- | :--- | :--- |
+| **Host** | Your workstation | One Linux VPS (Ubuntu 24.04) |
+| **Edge** | None — direct host port bindings | Caddy on `80`/`443`, automatic TLS |
+| **Access** | `localhost:<port>` per service, see the host matrix in §2 | Public subdomains only; no other ports exposed |
+| **Orchestration** | Per-app compose files, started individually | One `infra/compose.yaml` for the whole stack |
+| **Image source** | Built or run from **Submodules** and local source | Official upstream images; only the Astro Shell is built from this repo |
+| **Startup** | Multi-step, per service (see §3) | One command: `./infra/deploy.sh` |
+| **Data** | Disposable | Named volumes with nightly encrypted offsite backups |
+| **Operator runbook** | This document | **[GO_LIVE.md](./GO_LIVE.md)** — copy-paste spin-up |
+
+**Everything below this section describes local development only.** Do not use the host port matrix, the launch sequence, or the troubleshooting steps in this guide as a production reference.
+
+➡️ For production **how** (DNS, host harden, `./infra/deploy.sh`, first-run wizards, verify) see the **[Production Spin-Up Runbook](./GO_LIVE.md)**. For **why / what** (platform decision, service map, slices, backup/restore) see the **[Production Deployment Plan](./production_plan.md)**.
+
+---
+
 ## 1. Development Architecture & Network Topology
 
 In local development, the platform replicates our target 12-factor production environment using Docker container boundaries and explicit port-binding proxies:
@@ -122,4 +143,7 @@ Refer to [Services Setup Guide](./services_setup.md) for individual dependency b
 * ⭐️ **[System 12-Factor Compliance Audit](../12_factor_compliance.md)** — Comprehensive review of Stagea monorepo compliance with all twelve principles from 12factor.net.
 * 🐳 **[Shell 12-Factor Implementation Plan](../shell/12_FACTOR_PLAN.md)** — Shell-specific 12-factor operations audit and improvement goals.
 * 🛠 **[Per-Service Setup Guide](./services_setup.md)** — Step-by-step initial deployment and troubleshooting for each submodule.
+* 🚀 **[Production Spin-Up Runbook](./GO_LIVE.md)** — Operator copy-paste guide to bring `stagea-stuff.com` online (initial setup, `./infra/deploy.sh`, wizards, verify).
+* 🌍 **[Production Deployment Plan](./production_plan.md)** — How `stagea-stuff.com` goes live: VPS + Docker Compose + Caddy, phased service map, one-command deploy contract, and backup/restore.
+* 📋 **[Production Go-Live Sprint Cards](./cards/README.md)** — Vertical-slice cards for Phase 1 (slices 01–06) and deferred Phase 2–3 work.
 * 🐳 **[Shell Production Deployment Guide](./shell_deployment.md)** — In-depth guide to deploying the Astro Shell in staging and production (Nginx proxy, TLS, SIGTERM handlers).
