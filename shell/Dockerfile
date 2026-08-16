@@ -28,6 +28,10 @@ RUN pnpm build
 # --- Production Runner Stage ---
 FROM node:22-alpine AS runner
 
+LABEL org.opencontainers.image.source="https://github.com/heff0/stagea-stuff" \
+      org.opencontainers.image.title="stagea-shell" \
+      org.opencontainers.image.description="Astro Shell Edge for stagea-stuff.com"
+
 # Set production environment
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0

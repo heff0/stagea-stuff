@@ -2,7 +2,9 @@
 
 Copy-paste runbook for bringing `stagea-stuff.com` online. **How**, not why.
 
+- **From zero** (have you cloned yet?): [install-guides.md](../install-guides.md) — this runbook is Path A
 - **Why / what** (platform, service map, phases, backups): [Production Deployment Plan](./production_plan.md)
+- **After go-live** (when to resize, split, or cluster): [Scaling Plan](./scaling_plan.md)
 - **Implementation slices**: [Production Go-Live Sprint Cards](./cards/README.md)
 
 Local development is a different target — see [Development Stack Deployment Guide](./README.md#0-local-development-vs-production--read-this-first).
@@ -20,7 +22,8 @@ Assumed artifacts (landed by the implementation pass; do not invent a second lay
 | `infra/compose.yaml` | Whole production stack |
 | `infra/Caddyfile` | Edge + TLS |
 | `infra/.env.example` | Config inventory (copy to `.env`) |
-| `infra/deploy.sh` | Routine deploy |
+| `infra/deploy.sh` | Routine deploy (full stack or `--module`) |
+| [ci-cd.md](./ci-cd.md) | Path-filtered GHCR publish + per-module SSH |
 
 ---
 
@@ -132,7 +135,11 @@ Idempotent. A second run against a healthy stack is a no-op.
 | Flag | Effect |
 | :--- | :--- |
 | `--check` | Preflight only (`.env` present / permissions / required keys; Docker + Compose v2). Changes nothing. |
-| `--skip-git-pull` | Skip `git pull --ff-only` (pinned rollback). Still pulls images and reconciles the stack. |
+| `--skip-git-pull` | Skip `git pull --ff-only` (pinned rollback, or CI already synced the checkout). Still pulls images and reconciles the target. |
+| `--module shell\|forum\|wiki\|caddy` | Deploy that module only (`--no-deps`). A Shell change does not recreate forum or wiki. |
+| `--with-db` | With `--module wiki`, bounce `wiki-db` even if it is already healthy. |
+
+Merges to `main` auto-deploy **only** the modules whose dedicated paths changed. That path, the GHCR image, and the GitHub secrets/vars are in **[ci-cd.md](./ci-cd.md)**. `infra/compose.yaml` edits do **not** auto-bounce the full stack.
 
 **Escape hatch** (always sufficient; the wrapper is not load-bearing):
 
@@ -208,6 +215,8 @@ curl -I https://app.stagea-stuff.com   # skip if no app record
 
 **Ghost, shop, and SSO later.** Do not add Ghost, Saleor, the **Keycloak OIDC IdP**, or the **Directus Parts API** to this host as part of go-live. Phase 2/3 order is in the [plan](./production_plan.md#7-vertical-slices).
 
+**CI/CD.** After go-live, set the deploy secrets/vars in [ci-cd.md](./ci-cd.md) so a Shell merge pulls `ghcr.io/heff0/stagea-shell:<sha>` and restarts only `shell`.
+
 ---
 
 ## 8. Troubleshooting
@@ -223,6 +232,9 @@ curl -I https://app.stagea-stuff.com   # skip if no app record
 
 ## Related
 
+* [From-Zero Install Guides](../install-guides.md) — index if you have not cloned yet (this runbook is Path A)
+* [Architecture Map](../architecture.md) — request path and remaining gaps
+* [Per-module CI/CD](./ci-cd.md) — path filters, GHCR, SSH secrets, rollback
 * [Production Deployment Plan](./production_plan.md) — plan of record
 * [Production Go-Live Sprint Cards](./cards/README.md) — slice PRDs
 * [Development Stack Deployment Guide](./README.md) — local dev only

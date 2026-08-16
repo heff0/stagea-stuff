@@ -17,6 +17,7 @@ stagea-stuff/
     │   └── cards/              # active Sprint PRD Cards (strictly active sprint items)
     ├── deployment/             # installation, setups, and troubleshooting checklists
     │   ├── GO_LIVE.md          # operator production spin-up runbook
+    │   ├── ci-cd.md            # path-filtered per-module CI/CD (GHCR + SSH)
     │   └── cards/              # production go-live vertical-slice sprint cards
     ├── archive/                # Retired blueprints, completed PRD cards, and expired plans
     │   ├── shell/              # Archived shell documents
@@ -24,6 +25,8 @@ stagea-stuff/
     ├── 12_factor_compliance.md  # Master platform-wide architectural audit
     ├── EXECUTIVE_AUDIT_REPORT.md# Board-level findings and quality readiness scorecards
     ├── site-plan.md            # Overall target system map (single source of truth)
+    ├── architecture.md         # Visibility-first map (request path, monorepo, live vs planned)
+    ├── install-guides.md       # From-zero hub (production go-live vs local clone)
     └── DOCUMENTATION_GUIDE.md   # This maintenance and archiving guide
 ```
 

@@ -5,17 +5,29 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: ./infra/deploy.sh [--check] [--skip-git-pull] [--help]
+Usage: ./infra/deploy.sh [--check] [--skip-git-pull] [--module NAME] [--with-db] [--help]
 
   (default)   Preflight, git pull --ff-only, compose pull, up, health-wait, summary
   --check     Preflight only (env + Docker). Changes nothing.
   --skip-git-pull
-              Skip git pull --ff-only (pinned rollbacks)
+              Skip git pull --ff-only (pinned rollbacks, or when CI already synced the checkout)
+  --module NAME
+              Deploy only that module. Does not recreate other services.
+              NAME is one of: shell | forum | wiki | caddy
+  --with-db   With --module wiki, also bounce wiki-db even if it is already healthy
+
+Module targets:
+  shell   pull + up --no-deps shell
+  forum   forum-redis then forum (forum depends on redis)
+  wiki    wiki only; wiki-db only if missing/unhealthy, or --with-db
+  caddy   reload Caddyfile in-place, or recreate caddy only
 
 Escape hatch (always sufficient):
   docker compose -f infra/compose.yaml --env-file infra/.env up -d
 
 Health wait default 120s; override with DEPLOY_HEALTH_TIMEOUT.
+
+Never runs compose down (or down -v). Unhealthy targets fail the script and leave the stack running.
 EOF
 }
 
@@ -28,6 +40,7 @@ COMPOSE_FILE="infra/compose.yaml"
 COMPOSE=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 
 SERVICES=(caddy shell forum forum-redis wiki wiki-db)
+TARGET_SERVICES=("${SERVICES[@]}")
 
 public_url() {
   case "$1" in
@@ -61,19 +74,49 @@ REQUIRED_KEYS=(
 
 CHECK=0
 SKIP_GIT_PULL=0
+WITH_DB=0
+MODULE=""
 
-for arg in "$@"; do
-  case "$arg" in
-    --check) CHECK=1 ;;
-    --skip-git-pull) SKIP_GIT_PULL=1 ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check) CHECK=1; shift ;;
+    --skip-git-pull) SKIP_GIT_PULL=1; shift ;;
+    --with-db) WITH_DB=1; shift ;;
+    --module)
+      if [[ $# -lt 2 ]]; then
+        echo "error: --module requires a value: shell|forum|wiki|caddy" >&2
+        usage >&2
+        exit 1
+      fi
+      MODULE="$2"
+      shift 2
+      ;;
+    --module=*)
+      MODULE="${1#--module=}"
+      shift
+      ;;
     --help|-h) usage; exit 0 ;;
     *)
-      echo "error: unknown argument: $arg" >&2
+      echo "error: unknown argument: $1" >&2
       usage >&2
       exit 1
       ;;
   esac
 done
+
+case "$MODULE" in
+  ""|shell|forum|wiki|caddy) ;;
+  *)
+    echo "error: unknown --module: ${MODULE} (want shell|forum|wiki|caddy)" >&2
+    usage >&2
+    exit 1
+    ;;
+esac
+
+if (( WITH_DB == 1 )) && [[ "$MODULE" != "wiki" ]]; then
+  echo "error: --with-db is only valid with --module wiki" >&2
+  exit 1
+fi
 
 fail() {
   echo "error: $*" >&2
@@ -177,11 +220,11 @@ wait_healthy() {
   local timeout="${DEPLOY_HEALTH_TIMEOUT:-120}"
   local start now elapsed
   start="$(date +%s)"
-  echo "Waiting up to ${timeout}s for health checks..."
+  echo "Waiting up to ${timeout}s for health checks (${TARGET_SERVICES[*]})..."
   while true; do
     local all_ok=1
     local svc status
-    for svc in "${SERVICES[@]}"; do
+    for svc in "${TARGET_SERVICES[@]}"; do
       status="$(health_of "$svc")"
       if [[ "$status" != "healthy" ]]; then
         all_ok=0
@@ -204,7 +247,7 @@ print_summary() {
   local svc health image url
   printf '%-14s %-12s %-36s %s\n' "SERVICE" "HEALTH" "IMAGE" "URL"
   printf '%-14s %-12s %-36s %s\n' "-------" "------" "-----" "---"
-  for svc in "${SERVICES[@]}"; do
+  for svc in "${TARGET_SERVICES[@]}"; do
     health="$(health_of "$svc")"
     image="$(image_of "$svc")"
     url="$(public_url "$svc")"
@@ -214,12 +257,114 @@ print_summary() {
 
 all_healthy() {
   local svc
-  for svc in "${SERVICES[@]}"; do
+  for svc in "${TARGET_SERVICES[@]}"; do
     if [[ "$(health_of "$svc")" != "healthy" ]]; then
       return 1
     fi
   done
   return 0
+}
+
+resolve_targets() {
+  case "$MODULE" in
+    "")
+      TARGET_SERVICES=("${SERVICES[@]}")
+      ;;
+    shell)
+      TARGET_SERVICES=(shell)
+      ;;
+    caddy)
+      TARGET_SERVICES=(caddy)
+      ;;
+    forum)
+      TARGET_SERVICES=(forum-redis forum)
+      ;;
+    wiki)
+      if (( WITH_DB == 1 )); then
+        echo "wiki-db included (--with-db)"
+        TARGET_SERVICES=(wiki-db wiki)
+      else
+        local db_health
+        db_health="$(health_of wiki-db)"
+        if [[ "$db_health" == "healthy" ]]; then
+          echo "wiki-db is healthy; leaving it running (pass --with-db to bounce it)"
+          TARGET_SERVICES=(wiki)
+        else
+          echo "wiki-db is ${db_health}; including wiki-db in this deploy"
+          TARGET_SERVICES=(wiki-db wiki)
+        fi
+      fi
+      ;;
+  esac
+}
+
+pull_targets() {
+  echo "Pulling images: ${TARGET_SERVICES[*]}"
+  "${COMPOSE[@]}" pull "${TARGET_SERVICES[@]}"
+}
+
+up_full() {
+  "${COMPOSE[@]}" up -d --remove-orphans
+}
+
+up_no_deps() {
+  local svc
+  for svc in "$@"; do
+    echo "Starting ${svc} (--no-deps; other services left running)"
+    if [[ "$MODULE" == "wiki" && "$svc" == "wiki-db" && "$WITH_DB" -eq 1 ]]; then
+      "${COMPOSE[@]}" up -d --no-deps --force-recreate --remove-orphans "$svc"
+    else
+      "${COMPOSE[@]}" up -d --no-deps --remove-orphans "$svc"
+    fi
+  done
+}
+
+wait_one() {
+  local saved=("${TARGET_SERVICES[@]}")
+  TARGET_SERVICES=("$1")
+  local rc=0
+  wait_healthy || rc=$?
+  TARGET_SERVICES=("${saved[@]}")
+  return "$rc"
+}
+
+deploy_caddy() {
+  local status
+  status="$(health_of caddy)"
+  if [[ "$status" == "missing" ]]; then
+    echo "caddy is not running; starting caddy only"
+    "${COMPOSE[@]}" up -d --no-deps --remove-orphans caddy
+    return
+  fi
+  if "${COMPOSE[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile; then
+    echo "Caddy reloaded from bind-mounted Caddyfile (container not recreated)"
+    return
+  fi
+  echo "Caddy reload failed; recreating caddy only"
+  "${COMPOSE[@]}" up -d --no-deps --force-recreate --remove-orphans caddy
+}
+
+up_module() {
+  case "$MODULE" in
+    shell)
+      up_no_deps shell
+      ;;
+    caddy)
+      deploy_caddy
+      ;;
+    forum)
+      up_no_deps forum-redis
+      wait_one forum-redis
+      up_no_deps forum
+      ;;
+    wiki)
+      if [[ "${TARGET_SERVICES[0]}" == "wiki-db" ]]; then
+        up_no_deps wiki-db
+        wait_one wiki-db
+      fi
+      up_no_deps wiki
+      ;;
+  esac
 }
 
 preflight_env
@@ -236,8 +381,17 @@ else
   git_pull
 fi
 
-"${COMPOSE[@]}" pull
-"${COMPOSE[@]}" up -d --remove-orphans
+resolve_targets
+
+if [[ -n "$MODULE" ]]; then
+  echo "Module deploy: ${MODULE} → ${TARGET_SERVICES[*]}"
+  pull_targets
+  up_module
+else
+  echo "Full-stack deploy: ${TARGET_SERVICES[*]}"
+  "${COMPOSE[@]}" pull
+  up_full
+fi
 
 wait_rc=0
 wait_healthy || wait_rc=$?
@@ -245,7 +399,7 @@ wait_healthy || wait_rc=$?
 print_summary
 
 if (( wait_rc != 0 )) || ! all_healthy; then
-  echo "error: one or more services are unhealthy. Stack left running for diagnosis (no down)." >&2
+  echo "error: one or more target services are unhealthy. Stack left running for diagnosis (no down)." >&2
   exit 1
 fi
 

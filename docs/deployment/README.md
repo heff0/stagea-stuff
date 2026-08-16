@@ -21,7 +21,9 @@ The Stagea platform has **two distinct deployment targets**, and they share almo
 
 **Everything below this section describes local development only.** Do not use the host port matrix, the launch sequence, or the troubleshooting steps in this guide as a production reference.
 
-➡️ For production **how** (DNS, host harden, `./infra/deploy.sh`, first-run wizards, verify) see the **[Production Spin-Up Runbook](./GO_LIVE.md)**. For **why / what** (platform decision, service map, slices, backup/restore) see the **[Production Deployment Plan](./production_plan.md)**.
+From zero (have you cloned yet?): **[install-guides.md](../install-guides.md)** — this document is Path B / local only.
+
+➡️ For production **how** (DNS, host harden, `./infra/deploy.sh`, first-run wizards, verify) see the **[Production Spin-Up Runbook](./GO_LIVE.md)**. For **why / what** (platform decision, service map, slices, backup/restore) see the **[Production Deployment Plan](./production_plan.md)**. For **after go-live** (RAM/disk inequalities, 1,000+ users, feature-growth cost) see the **[Scaling Plan](./scaling_plan.md)**.
 
 ---
 
@@ -139,11 +141,14 @@ Refer to [Services Setup Guide](./services_setup.md) for individual dependency b
 
 ## 🔗 Related Documentation & Compliance References
 
+* **[From-Zero Install Guides](../install-guides.md)** — Start here if you have not cloned yet (this document is Path B / local only).
+* **[Architecture Map](../architecture.md)** — Production request path, monorepo map, remaining gaps.
 * 🧭 **[Platform Master Site-Plan](../site-plan.md)** — Overall multi-site architecture, subdomain map, and current monorepo statuses.
 * ⭐️ **[System 12-Factor Compliance Audit](../12_factor_compliance.md)** — Comprehensive review of Stagea monorepo compliance with all twelve principles from 12factor.net.
 * 🐳 **[Shell 12-Factor Implementation Plan](../shell/12_FACTOR_PLAN.md)** — Shell-specific 12-factor operations audit and improvement goals.
 * 🛠 **[Per-Service Setup Guide](./services_setup.md)** — Step-by-step initial deployment and troubleshooting for each submodule.
 * 🚀 **[Production Spin-Up Runbook](./GO_LIVE.md)** — Operator copy-paste guide to bring `stagea-stuff.com` online (initial setup, `./infra/deploy.sh`, wizards, verify).
+* 🔁 **[Per-module CI/CD](./ci-cd.md)** — Path filters, GHCR publish, SSH secrets, Shell-only deploys.
 * 🌍 **[Production Deployment Plan](./production_plan.md)** — How `stagea-stuff.com` goes live: VPS + Docker Compose + Caddy, phased service map, one-command deploy contract, and backup/restore.
 * 📋 **[Production Go-Live Sprint Cards](./cards/README.md)** — Vertical-slice cards for Phase 1 (slices 01–06) and deferred Phase 2–3 work.
 * 🐳 **[Shell Production Deployment Guide](./shell_deployment.md)** — In-depth guide to deploying the Astro Shell in staging and production (Nginx proxy, TLS, SIGTERM handlers).

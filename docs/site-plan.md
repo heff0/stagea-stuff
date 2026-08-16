@@ -72,17 +72,17 @@ stagea-stuff/
 
 Current vs target:
 
-- **Implemented today**: `shell/` (SSR engine, Federated Search, and SSO dashboard active), `forum/`, `wiki/`, `blog/`, `shop/`, `docs/` (including our dedicated [Shell Design Reference](./shell/)), `.cursor/skills/`, `skills-lock.json`, `.gitmodules`.
-- **Not yet scaffolded**: `apps/`, `services/`, `packages/`, `infra/`, `turbo.json`, `pnpm-workspace.yaml`, root `package.json`. The placeholder directories `auth/`, `parts/`, `services/`, `infra/`, and `packages/` are currently empty.
+- **Implemented today**: `shell/` (SSR engine, Federated Search, and SSO dashboard active), `forum/`, `wiki/`, `blog/`, `shop/`, `infra/` (production `compose.yaml`, Caddyfile, `deploy.sh`), `docs/` (including our dedicated [Shell Design Reference](./shell/)), `.cursor/skills/`, `skills-lock.json`, `.gitmodules`.
+- **Not yet scaffolded**: `apps/`, `packages/`, `turbo.json`, `pnpm-workspace.yaml`, root `package.json`. The placeholder directories `auth/`, `parts/`, and `services/` are currently empty.
 
 ## 5. Shell (Global Wrapper)
 
-**Primary choice: Astro** with server islands and the `@astrojs/node` adapter behind nginx.
+**Primary choice: Astro** with server islands and the `@astrojs/node` adapter behind Caddy (day-1 edge). The nginx spec in [shell_deployment.md](./deployment/shell_deployment.md) is later hardening, not the go-live proxy.
 
 Responsibilities:
 
 - Render the global header/footer, nav, search bar, and login state.
-- Proxy `app.stagea-stuff.com/*` to the appropriate backend or embed via iframe/SSR fetch where licensing allows.
+- Serve the apex `stagea-stuff.com` (and keep `app.` / `www.` as redirects). Link out to forum / wiki / blog / shop on their own subdomains.
 - Host the landing page and marketing pages (plain Markdown content collections).
 - Exchange the OIDC session cookie from Keycloak for a signed header that downstream services can trust.
 
@@ -112,8 +112,11 @@ Do not duplicate the deployment specification here; the plan is the source of tr
 
 The Stagea platform enforces rigorous system quality controls and 12-factor operations. Refer to these live-updated design assets for our shell engineering standards:
 
+* 🗺️ **[Architecture Map](./architecture.md)** — Request path, what we build vs official images, live vs planned, remaining gaps.
+* 📥 **[From-Zero Install Guides](./install-guides.md)** — Start here if you have not cloned yet (production go-live vs local development).
 * 📄 **[Production Spin-Up Runbook](./deployment/GO_LIVE.md)** — Operator copy-paste checklist to bring `stagea-stuff.com` online.
 * 📄 **[Production Deployment Plan](./deployment/production_plan.md)** — VPS + Docker Compose + Caddy go-live plan, phased service map, one-command deploy contract, and backup/restore minimum.
+* 📄 **[Scaling Plan](./deployment/scaling_plan.md)** — Decision matrix in RAM/disk/concurrency, plan through 1,000+ users, running cost as features land.
 * 📄 **[Executive Architecture & Quality Report](./EXECUTIVE_AUDIT_REPORT.md)** — Our centralized executive findings, software readiness grades, and prioritized improvement roadmap.
 * 📄 **[Documentation & Archiving Guide](./DOCUMENTATION_GUIDE.md)** — Standards for preventing documentation rot, technical terminology drift, and the operations blueprint for the Archiving program.
 * 📄 **[System-Wide 12-Factor Compliance](./12_factor_compliance.md)** — Audit of how Stagea maps all twelve factors from 12factor.net to our monorepo architecture.

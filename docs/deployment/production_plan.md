@@ -4,7 +4,7 @@ This document is the production counterpart to the [Development Stack Deployment
 
 **Scope**: production only. Nothing in here describes local development — see [`README.md`](./README.md) for the local host port matrix and troubleshooting protocols.
 
-**Status**: plan of record. No Compose file, Caddyfile, or deployment workflow exists in the repository yet. This document is the specification an implementation pass will build against.
+**Status**: plan of record. Phase 1 Compose, Caddyfile, and `./infra/deploy.sh` live in `infra/`. What to do after users show up: [Scaling Plan](./scaling_plan.md).
 
 ---
 
@@ -305,6 +305,7 @@ Add a restic (or borg) container or systemd timer performing nightly logical dat
 
 Extend `.github/workflows/shell-ci.yml` — which already performs a Docker build dry-run — to publish the Astro Shell image to GHCR on merges to the default branch. Switch the Compose file from `build:` to a pinned `image:` reference. Pin every upstream image to an explicit minor tag or digest.
 
+* **Status in repo**: `.github/workflows/deploy.yml` publishes `ghcr.io/heff0/stagea-shell:{<sha>,main}` on Shell changes (or `workflow_dispatch`). Compose defaults to `SHELL_IMAGE`. Host `build:` remains as fallback. Per-module SSH is documented in [ci-cd.md](./ci-cd.md). Make the GHCR package public (or `docker login` on the VPS).
 * **Demo**: a merge to the default branch produces a new tagged image; `./infra/deploy.sh` pulls it with no compilation on the host.
 * **Test**: deploy time drops sharply and host CPU stays flat during deploy; rolling back to the previous tag restores the previous release.
 * **Increment**: deploys stop depending on host build capacity and become reversible.
@@ -406,7 +407,9 @@ These decisions are deliberately left to the agent or engineer who writes the co
 
 * 🧭 **[Platform Master Site-Plan](../site-plan.md)** — Overall multi-site architecture, subdomain map, and current monorepo statuses.
 * 🚀 **[Production Spin-Up Runbook](./GO_LIVE.md)** — Operator copy-paste checklist: DNS, host harden, `./infra/deploy.sh`, first-run wizards, verify.
+* 🔁 **[Per-module CI/CD](./ci-cd.md)** — Path-filtered GHCR publish and `--module` SSH (implemented in `.github/workflows/deploy.yml`).
 * 📋 **[Production Go-Live Sprint Cards](./cards/README.md)** — Implementation-ready cards for the eleven slices in §7.
+* 📈 **[Scaling Plan](./scaling_plan.md)** — RAM/disk inequalities, 1,000+ users, feature-growth cost, k3s as S3. Not a provider comparison.
 * 🚀 **[Development Stack Deployment Guide](./README.md)** — Local developer stack, host port matrix, and stack-wide troubleshooting. Local dev only.
 * 🛠 **[Per-Service Setup Guide](./services_setup.md)** — Per-submodule local setup and first-run steps.
 * 🐳 **[Astro Shell Production & Staging Deployment Guide](./shell_deployment.md)** — Shell image build, environment contract, graceful shutdown, and the optional nginx edge specification for later hardening.

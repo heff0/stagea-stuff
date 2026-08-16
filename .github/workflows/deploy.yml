@@ -1,0 +1,421 @@
+name: Per-module deploy
+
+# Path-filtered deploys on main. A Shell change publishes GHCR and restarts
+# only `shell`. Forum, wiki, and Caddy are left running unless their own
+# paths changed. compose.yaml edits never auto-bounce the full stack.
+#
+# workflow_dispatch with module=all is the only CI path that runs a full
+# ./infra/deploy.sh. Missing deploy secrets still succeed (publish if needed).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      module:
+        description: Module to deploy (all = full stack on the VPS)
+        required: true
+        type: choice
+        options:
+          - shell
+          - forum
+          - wiki
+          - caddy
+          - all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed modules
+    runs-on: ubuntu-latest
+    outputs:
+      shell: ${{ steps.set.outputs.shell }}
+      caddy: ${{ steps.set.outputs.caddy }}
+      wiki: ${{ steps.set.outputs.wiki }}
+      forum: ${{ steps.set.outputs.forum }}
+      compose: ${{ steps.set.outputs.compose }}
+      deploy_scripts: ${{ steps.set.outputs.deploy_scripts }}
+      all: ${{ steps.set.outputs.all }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Path filter
+        id: filter
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shell:
+              - 'shell/**'
+            caddy:
+              - 'infra/Caddyfile'
+              - 'infra/caddy/**'
+            wiki:
+              - 'infra/wiki/**'
+            compose:
+              - 'infra/compose.yaml'
+            deploy_scripts:
+              - 'infra/deploy.sh'
+
+      - name: Resolve module flags
+        id: set
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_MODULE: ${{ github.event.inputs.module }}
+          FILTER_SHELL: ${{ steps.filter.outputs.shell }}
+          FILTER_CADDY: ${{ steps.filter.outputs.caddy }}
+          FILTER_WIKI: ${{ steps.filter.outputs.wiki }}
+          FILTER_COMPOSE: ${{ steps.filter.outputs.compose }}
+          FILTER_DEPLOY: ${{ steps.filter.outputs.deploy_scripts }}
+        run: |
+          set -euo pipefail
+          echo "shell=false" >> "$GITHUB_OUTPUT"
+          echo "caddy=false" >> "$GITHUB_OUTPUT"
+          echo "wiki=false" >> "$GITHUB_OUTPUT"
+          echo "forum=false" >> "$GITHUB_OUTPUT"
+          echo "compose=false" >> "$GITHUB_OUTPUT"
+          echo "deploy_scripts=false" >> "$GITHUB_OUTPUT"
+          echo "all=false" >> "$GITHUB_OUTPUT"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            case "$DISPATCH_MODULE" in
+              shell) echo "shell=true" >> "$GITHUB_OUTPUT" ;;
+              caddy) echo "caddy=true" >> "$GITHUB_OUTPUT" ;;
+              wiki) echo "wiki=true" >> "$GITHUB_OUTPUT" ;;
+              forum) echo "forum=true" >> "$GITHUB_OUTPUT" ;;
+              all) echo "all=true" >> "$GITHUB_OUTPUT" ;;
+            esac
+            exit 0
+          fi
+
+          # Push to main: auto-deploy only from dedicated paths.
+          # compose.yaml never triggers a full-stack bounce (see compose-changed).
+          # forum has no dedicated path — dispatch module=forum or module=all.
+          [ "${FILTER_SHELL:-false}" = "true" ] && echo "shell=true" >> "$GITHUB_OUTPUT"
+          [ "${FILTER_CADDY:-false}" = "true" ] && echo "caddy=true" >> "$GITHUB_OUTPUT"
+          [ "${FILTER_WIKI:-false}" = "true" ] && echo "wiki=true" >> "$GITHUB_OUTPUT"
+          [ "${FILTER_COMPOSE:-false}" = "true" ] && echo "compose=true" >> "$GITHUB_OUTPUT"
+          [ "${FILTER_DEPLOY:-false}" = "true" ] && echo "deploy_scripts=true" >> "$GITHUB_OUTPUT"
+
+  compose-changed:
+    name: compose.yaml notice
+    needs: [changes]
+    if: needs.changes.outputs.compose == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do not auto-bounce the stack
+        run: |
+          echo "infra/compose.yaml changed."
+          echo "Automatic full-stack deploy is disabled so a shared YAML edit cannot restart forum/wiki/caddy."
+          echo "To apply compose changes, run on the host:"
+          echo "  ./infra/deploy.sh --skip-git-pull"
+          echo "or use workflow_dispatch with module=all (full stack) or module=shell|forum|wiki|caddy."
+          echo "Global keys (networks, x-logging) require a full ./infra/deploy.sh --skip-git-pull."
+
+  deploy-scripts-changed:
+    name: deploy.sh notice
+    needs: [changes]
+    if: needs.changes.outputs.deploy_scripts == 'true' && needs.changes.outputs.shell != 'true' && needs.changes.outputs.caddy != 'true' && needs.changes.outputs.wiki != 'true' && needs.changes.outputs.forum != 'true' && needs.changes.outputs.all != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Script-only change
+        run: |
+          echo "infra/deploy.sh changed; no services were bounced."
+          echo "The next module deploy (or a host git pull) will pick up the new script."
+
+  publish-shell:
+    name: Publish stagea-shell to GHCR
+    needs: [changes]
+    if: needs.changes.outputs.shell == 'true' || needs.changes.outputs.all == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./shell
+          file: ./shell/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/heff0/stagea-shell:${{ github.sha }}
+            ghcr.io/heff0/stagea-shell:main
+          labels: |
+            org.opencontainers.image.source=https://github.com/heff0/stagea-stuff
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=stagea-shell
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-shell:
+    name: Deploy shell
+    needs: [changes, publish-shell]
+    if: needs.changes.outputs.shell == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: stagea-vps-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Decide whether to SSH
+        id: gate
+        env:
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${DEPLOY_ENABLED}" != "true" ]; then
+            echo "SSH skipped: repository variable DEPLOY_ENABLED is not 'true'. Image publish still ran. Set DEPLOY_ENABLED=true plus DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY to enable VPS deploys."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_SSH_KEY}" ]; then
+            echo "SSH skipped: DEPLOY_HOST, DEPLOY_USER, or DEPLOY_SSH_KEY is unset. Image publish still ran."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: SSH deploy shell only
+        if: steps.gate.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/stagea' }}
+          SHELL_IMAGE: ghcr.io/heff0/stagea-shell:${{ github.sha }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 15m
+          envs: DEPLOY_PATH,SHELL_IMAGE
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch origin
+            git checkout main
+            git merge --ff-only origin/main
+            export DEPLOY_HEALTH_TIMEOUT="${DEPLOY_HEALTH_TIMEOUT:-180}"
+            SHELL_IMAGE="$SHELL_IMAGE" ./infra/deploy.sh --skip-git-pull --module shell
+
+  deploy-caddy:
+    name: Deploy caddy
+    needs: [changes]
+    if: needs.changes.outputs.caddy == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: stagea-vps-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Decide whether to SSH
+        id: gate
+        env:
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${DEPLOY_ENABLED}" != "true" ]; then
+            echo "SSH skipped: repository variable DEPLOY_ENABLED is not 'true'. Set DEPLOY_ENABLED=true plus DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY to enable VPS deploys."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_SSH_KEY}" ]; then
+            echo "SSH skipped: DEPLOY_HOST, DEPLOY_USER, or DEPLOY_SSH_KEY is unset."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: SSH deploy caddy only
+        if: steps.gate.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/stagea' }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 10m
+          envs: DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch origin
+            git checkout main
+            git merge --ff-only origin/main
+            export DEPLOY_HEALTH_TIMEOUT="${DEPLOY_HEALTH_TIMEOUT:-180}"
+            ./infra/deploy.sh --skip-git-pull --module caddy
+
+  deploy-wiki:
+    name: Deploy wiki
+    needs: [changes]
+    if: needs.changes.outputs.wiki == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: stagea-vps-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Decide whether to SSH
+        id: gate
+        env:
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${DEPLOY_ENABLED}" != "true" ]; then
+            echo "SSH skipped: repository variable DEPLOY_ENABLED is not 'true'. Set DEPLOY_ENABLED=true plus DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY to enable VPS deploys."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_SSH_KEY}" ]; then
+            echo "SSH skipped: DEPLOY_HOST, DEPLOY_USER, or DEPLOY_SSH_KEY is unset."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: SSH deploy wiki only
+        if: steps.gate.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/stagea' }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 15m
+          envs: DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch origin
+            git checkout main
+            git merge --ff-only origin/main
+            export DEPLOY_HEALTH_TIMEOUT="${DEPLOY_HEALTH_TIMEOUT:-180}"
+            ./infra/deploy.sh --skip-git-pull --module wiki
+
+  deploy-forum:
+    name: Deploy forum
+    needs: [changes]
+    if: needs.changes.outputs.forum == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: stagea-vps-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Decide whether to SSH
+        id: gate
+        env:
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${DEPLOY_ENABLED}" != "true" ]; then
+            echo "SSH skipped: repository variable DEPLOY_ENABLED is not 'true'. Set DEPLOY_ENABLED=true plus DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY to enable VPS deploys."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_SSH_KEY}" ]; then
+            echo "SSH skipped: DEPLOY_HOST, DEPLOY_USER, or DEPLOY_SSH_KEY is unset."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: SSH deploy forum only
+        if: steps.gate.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/stagea' }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 15m
+          envs: DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch origin
+            git checkout main
+            git merge --ff-only origin/main
+            export DEPLOY_HEALTH_TIMEOUT="${DEPLOY_HEALTH_TIMEOUT:-180}"
+            ./infra/deploy.sh --skip-git-pull --module forum
+
+  deploy-all:
+    name: Deploy full stack
+    needs: [changes, publish-shell]
+    if: needs.changes.outputs.all == 'true' && (needs.publish-shell.result == 'success' || needs.publish-shell.result == 'skipped')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: stagea-vps-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Decide whether to SSH
+        id: gate
+        env:
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${DEPLOY_ENABLED}" != "true" ]; then
+            echo "SSH skipped: repository variable DEPLOY_ENABLED is not 'true'. Image publish still ran if this was module=all. Set DEPLOY_ENABLED=true plus DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY to enable VPS deploys."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_SSH_KEY}" ]; then
+            echo "SSH skipped: DEPLOY_HOST, DEPLOY_USER, or DEPLOY_SSH_KEY is unset. Image publish still ran if this was module=all."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: SSH full-stack deploy
+        if: steps.gate.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/stagea' }}
+          SHELL_IMAGE: ghcr.io/heff0/stagea-shell:${{ github.sha }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 20m
+          envs: DEPLOY_PATH,SHELL_IMAGE
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch origin
+            git checkout main
+            git merge --ff-only origin/main
+            export DEPLOY_HEALTH_TIMEOUT="${DEPLOY_HEALTH_TIMEOUT:-300}"
+            SHELL_IMAGE="$SHELL_IMAGE" ./infra/deploy.sh --skip-git-pull

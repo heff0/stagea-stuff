@@ -2,6 +2,8 @@
 # Invoke from the repository root:
 #   docker compose -f infra/compose.yaml --env-file infra/.env up -d
 # Only Caddy publishes host ports (80/443). Everything else is internal.
+# Do not add Ghost, Saleor, Keycloak, or Directus here — see
+# docs/deployment/scaling_plan.md (feature-growth RAM) and slice 9 / 11.
 
 name: stagea
 
@@ -45,10 +47,14 @@ services:
     logging: *default-logging
 
   shell:
+    # OCI image published by .github/workflows/deploy.yml on main.
+    # Labels (source/revision) are set at build time. CI sets SHELL_IMAGE to
+    # ghcr.io/heff0/stagea-shell:<sha>. Hosts without GHCR can still
+    # `up --build` using the build: fallback (tag as stagea-shell:local).
     build:
       context: ../shell
       dockerfile: Dockerfile
-    image: stagea-shell:local
+    image: ${SHELL_IMAGE:-ghcr.io/heff0/stagea-shell:main}
     restart: unless-stopped
     expose:
       - "4321"
@@ -115,6 +121,8 @@ services:
       redis__password: ${FORUM_REDIS_PASSWORD}
     volumes:
       - forum_data:/opt/config
+      # S0: named volume. When OBJECT_STORAGE_BUCKET is in use, stop growing this
+      # volume — see docs/deployment/scaling_plan.md (disk inequality).
       - forum_uploads:/usr/src/app/public/uploads
     networks: [stagea-net]
     healthcheck:
@@ -161,6 +169,7 @@ services:
     entrypoint: ["/bin/sh", "/stagea-wiki-entrypoint.sh"]
     command: ["apache2-foreground"]
     volumes:
+      # S0: named volume. Same object-storage contract as forum_uploads.
       - wiki_images:/var/www/html/images
       - wiki_config:/persist
       - ./wiki/docker-entrypoint.sh:/stagea-wiki-entrypoint.sh:ro

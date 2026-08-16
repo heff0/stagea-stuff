@@ -14,13 +14,25 @@ services:
       - HOST=0.0.0.0
       - PORT=4321
       - PUBLIC_SITE_NAME=Stagea Community
-      # Configurable endpoints (12-factor Config)
-      - FORUM_URL=http://localhost:4567/
-      - WIKI_URL=http://localhost:8080/w/
-      - BLOG_URL=http://localhost:2368/
-      - SHOP_URL=http://localhost:3000/
+      # Configurable endpoints (12-factor Config). Override per env; no baked hostnames.
+      - FORUM_URL=${FORUM_URL:-http://localhost:4567/}
+      - WIKI_URL=${WIKI_URL:-http://localhost:8080/w/}
+      - BLOG_URL=${BLOG_URL:-http://localhost:2368/}
+      - SHOP_URL=${SHOP_URL:-http://localhost:3000/}
       # OIDC Authentication variables (to be injected at runtime)
-      - AUTH_ISSUER_URL=http://localhost:8080/realms/stagea
-      - AUTH_CLIENT_ID=shell-client
-      - AUTH_CLIENT_SECRET=placeholder-secret
+      - AUTH_ISSUER_URL=${AUTH_ISSUER_URL:-http://localhost:8080/realms/stagea}
+      - AUTH_CLIENT_ID=${AUTH_CLIENT_ID:-shell-client}
+      - AUTH_CLIENT_SECRET=${AUTH_CLIENT_SECRET:-placeholder-secret}
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4321/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 25s

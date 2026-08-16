@@ -2,20 +2,24 @@
 
 A single-repository bundle of the web services that power the Stagea community platform: a forum, a wiki, a blog, a storefront, an identity provider, and a parts catalogue. Each service is an upstream project pinned here as a Git submodule, wired together by shared infra and packages and kept consistent by the `.cursor/skills/` toolkit.
 
-Public domains this repo targets:
+Starting from nothing: **[docs/install-guides.md](docs/install-guides.md)**. Picture of the running system: **[docs/architecture.md](docs/architecture.md)**. Canonical host map: **[docs/site-plan.md](docs/site-plan.md#2-subdomain-map)**.
+
+Public domains this repo targets (apex is the **Astro Shell** / **Shell Edge**; `www` and `app` redirect to apex in production):
 
 | Subdomain | Service | Upstream | Status in repo |
 | --- | --- | --- | --- |
-| `stagea-stuff.com` / `app.stagea-stuff.com` | Astro shell (landing page, planned search + OIDC login) | local (`shell/`) | Scaffolded in `shell/` |
-| `forum.stagea-stuff.com` | NodeBB (Node.js + Redis/Mongo/Postgres) | `github.com/NodeBB/NodeBB` | Submodule at `forum/` (tracks `master`, pinned to `ac8bad8`) |
-| `wiki.stagea-stuff.com` | MediaWiki (PHP) | `github.com/wikimedia/mediawiki` | Submodule at `wiki/` (tracks `master`, pinned to `a0a8c14`) |
-| `blog.stagea-stuff.com` | Ghost (Node.js, pnpm + Nx monorepo) | `github.com/TryGhost/Ghost` | Submodule at `blog/` (tracks `main`, pinned to `06b62ae2`) |
-| `shop.stagea-stuff.com` | Saleor Storefront "Paper" (Next.js 16 + GraphQL) | `github.com/saleor/storefront` | Submodule at `shop/` (tracks `main`, pinned to `be64a69`) |
-| `auth.stagea-stuff.com` | Keycloak (OIDC identity provider) | `github.com/keycloak/keycloak` | Directory reserved (`auth/`), not yet populated |
-| `parts.stagea-stuff.com` | Directus-backed parts catalogue | `github.com/directus/directus` | Directory reserved (`parts/`), not yet populated |
+| `stagea-stuff.com` (apex) | Astro Shell / Shell Edge | local (`shell/`) | Active in `shell/`. Production Compose serves the apex. |
+| `forum.stagea-stuff.com` | NodeBB (Node.js + Redis/Mongo/Postgres) | `github.com/NodeBB/NodeBB` | Submodule at `forum/` (tracks `master`, pinned to `ba03a24`) |
+| `wiki.stagea-stuff.com` | MediaWiki (PHP) | `github.com/wikimedia/mediawiki` | Submodule at `wiki/` (tracks `master`, pinned to `01e5628`) |
+| `blog.stagea-stuff.com` | Ghost (Node.js, pnpm + Nx monorepo) | `github.com/TryGhost/Ghost` | Submodule at `blog/` (tracks `main`, pinned to `1562834`) |
+| `shop.stagea-stuff.com` | Saleor Storefront "Paper" (Next.js 16 + GraphQL) | `github.com/saleor/storefront` | Submodule at `shop/` (tracks `main`, pinned to `8de1ae7`) |
+| `auth.stagea-stuff.com` | Keycloak OIDC IdP | `github.com/keycloak/keycloak` | Directory reserved (`auth/`), not yet populated |
+| `parts.stagea-stuff.com` | Directus Parts API | `github.com/directus/directus` | Directory reserved (`parts/`), not yet populated |
 
 ## Table of Contents
 
+- [From zero (install guides)](docs/install-guides.md)
+- [Architecture](docs/architecture.md)
 - [Repository Layout](#repository-layout)
 - [What Actually Exists Today](#what-actually-exists-today)
 - [Cursor Skills](#cursor-skills)
@@ -38,28 +42,30 @@ stagea-stuff/
 ├── CONTRIBUTING.md
 ├── skills-lock.json        # Pinned content hashes for the caveman skill set
 ├── auth/                   # (empty) reserved for Keycloak
-├── blog/                   # Submodule → TryGhost/Ghost (main, pinned to 06b62ae2)
+├── blog/                   # Submodule → TryGhost/Ghost (main, pinned to 1562834)
 ├── docs/                   # Project planning, ADRs, per-app setup notes
-├── forum/                  # Submodule → NodeBB/NodeBB (master, pinned to ac8bad8)
-├── infra/                  # Compose overrides and wrappers (see infra/README.md)
+├── forum/                  # Submodule → NodeBB/NodeBB (master, pinned to ba03a24)
+├── infra/                  # Production compose + Caddy + deploy.sh; local Ghost wrappers (see infra/README.md)
 ├── packages/               # (empty) reserved for shared TS packages (ui, auth-client, …)
 ├── parts/                  # (empty) reserved for Directus parts catalogue
 ├── services/               # (empty) reserved for backend service configs
 ├── shell/                  # Astro 6 + Tailwind 4 SSR app: end-user landing, planned search + login
-├── shop/                   # Submodule → saleor/storefront (main, pinned to be64a69)
-└── wiki/                   # Submodule → wikimedia/mediawiki (master, pinned to a0a8c14)
+├── shop/                   # Submodule → saleor/storefront (main, pinned to 8de1ae7)
+└── wiki/                   # Submodule → wikimedia/mediawiki (master, pinned to 01e5628)
 ```
 
 ## What Actually Exists Today
 
-- **Forum (`forum/`)** — NodeBB submodule at `master`/`ac8bad8b`. Ships `Dockerfile`, `dev.Dockerfile`, and three compose files (`docker-compose.yml`, `docker-compose-pgsql.yml`, `docker-compose-redis.yml`). Entry point is `./nodebb` (CLI wrapper around `app.js`).
-- **Wiki (`wiki/`)** — MediaWiki submodule at `master`/`a0a8c145`. Includes `docker-compose.yml`, `composer.json`, and the `mw-config/` web installer. `LocalSettings.php` is intentionally absent until you run the installer.
-- **Blog (`blog/`)** — Ghost monorepo submodule at `main`/`06b62ae2`, managed with `pnpm@10.33.0` and Nx 22. Dev stack is driven by `compose.dev.yaml` plus opt-in overlays (`compose.dev.sqlite.yaml`, `compose.dev.mailgun.yaml`, `compose.dev.analytics.yaml`, `compose.dev.storage.yaml`). Ghost itself has inner submodules, which `pnpm setup` initialises.
-- **Shop (`shop/`)** — Saleor storefront submodule at `main`/`be64a69`. Next.js 16 + React 19 + urql + Tailwind. Contents are only present after `git submodule update --init --recursive`.
-- **Docs (`docs/`)** — `site-plan.md`, `shop-setup.md`, `app_test_plan.md`, `wiki_options.md`, and a wiki-specific `CONTRIBUTING.md`.
+- **Astro Shell (`shell/`)** — In-house Astro 6 + Tailwind 4 SSR app. Production serves it on the apex via `infra/compose.yaml`. See [`shell/README.md`](shell/README.md).
+- **Forum (`forum/`)** — NodeBB submodule at `master`/`ba03a24`. Ships `Dockerfile`, `dev.Dockerfile`, and three compose files (`docker-compose.yml`, `docker-compose-pgsql.yml`, `docker-compose-redis.yml`). Entry point is `./nodebb` (CLI wrapper around `app.js`).
+- **Wiki (`wiki/`)** — MediaWiki submodule at `master`/`01e5628`. Includes `docker-compose.yml`, `composer.json`, and the `mw-config/` web installer. `LocalSettings.php` is intentionally absent until you run the installer.
+- **Blog (`blog/`)** — Ghost monorepo submodule at `main`/`1562834`, managed with `pnpm@10.33.0` and Nx 22. Dev stack is driven by `compose.dev.yaml` plus opt-in overlays (`compose.dev.sqlite.yaml`, `compose.dev.mailgun.yaml`, `compose.dev.analytics.yaml`, `compose.dev.storage.yaml`). Ghost itself has inner submodules, which `pnpm setup` initialises.
+- **Shop (`shop/`)** — Saleor storefront submodule at `main`/`8de1ae7`. Next.js 16 + React 19 + urql + Tailwind. Contents are only present after `git submodule update --init --recursive`.
+- **Infra (`infra/`)** — Production Phase 1 stack: `compose.yaml`, `Caddyfile`, `deploy.sh`, `.env.example`. Local Ghost wrappers (`blog-dev.sh`, `blog.override.yaml`) and `homepage/` still live here. See [`infra/README.md`](infra/README.md).
+- **Docs (`docs/`)** — From-zero hub [`install-guides.md`](docs/install-guides.md), architecture map [`architecture.md`](docs/architecture.md), `site-plan.md`, `shop-setup.md`, `app_test_plan.md`, `wiki_options.md`, and a wiki-specific `CONTRIBUTING.md`.
 - **Skills (`.cursor/skills/`)** — Six skills, all activated via `ENABLED` marker files (see below).
 
-Everything else (`auth/`, `parts/`, `services/`, `infra/`, `packages/`) is an empty reserved directory. The `site-plan.md` describes the target state; the repo itself has not scaffolded those yet.
+Empty reserved directories: `auth/`, `parts/`, `services/`, `packages/`. The **Keycloak OIDC IdP** and **Directus Parts API** are not populated. `infra/` is **not** empty.
 
 ## Cursor Skills
 
@@ -90,7 +96,7 @@ All six skills are currently enabled:
 Each submodule app brings its own toolchain. Install what you need for the services you intend to run:
 
 - **Git** ≥ 2.30 (required; submodule flow assumes `--recurse-submodules`).
-- **Docker Engine** ≥ 24 with Compose v2 (used by `forum/`, `wiki/`, `blog/`, and the planned `infra/` stack).
+- **Docker Engine** ≥ 24 with Compose v2 (used by `forum/`, `wiki/`, `blog/`, and production `infra/compose.yaml`).
 - **Node.js** ≥ 20 LTS — NodeBB requires Node 20+; Ghost and the Saleor storefront are built against Node 20/22.
 - **pnpm** 10.33.0 — enforced by `blog/`; also used by `shop/`. `corepack enable` is the easiest install.
 - **PHP** 8.1+ and **Composer** — only if running the wiki without Docker.
@@ -100,8 +106,10 @@ Each submodule app brings its own toolchain. Install what you need for the servi
 
 ## Clone & Initialise
 
+Local development clones **Submodules**. Production hosts must not — see [docs/install-guides.md](docs/install-guides.md).
+
 ```/dev/null/clone.sh#L1-5
-git clone --recurse-submodules <this-repo-url> stagea-stuff
+git clone --recurse-submodules https://github.com/heff0/stagea-stuff.git stagea-stuff
 cd stagea-stuff
 
 # If you forgot --recurse-submodules:
@@ -112,10 +120,10 @@ After init, verify all four submodules are populated and at the pinned commits:
 
 ```/dev/null/verify.sh#L1-6
 git submodule status
-# 06b62ae2f3654328ca623271916096818fd0ef23 blog  (v6.25.0-406-g06b62ae2f3)
-# ac8bad8bc95394e27445b696515e3d115373bca8 forum (v4.10.2-6-gac8bad8bc9)
-# be64a695e57e9cca0fccb2a53ff774c25b0bd109 shop  (heads/main)
-# a0a8c1451e44de22451de7421d128bef114765cc wiki  (1.6.0-127028-ga0a8c1451e4)
+# 1562834354966ab7e7330fcf25a82e522d4a0a19 blog
+# ba03a243d9570ffe0aa8cb0af77984cde6e87fe6 forum
+# 8de1ae7320b97a012ade6d88001af49bfe32bfb4 shop
+# 01e5628821c78d47fc665a9abb7bbcde02d34573 wiki
 ```
 
 A leading `-` on any line means that submodule hasn't been initialised; a leading `+` means its working tree has moved ahead of the pinned commit.
@@ -216,24 +224,27 @@ The same pattern documented in `docs/shop-setup.md` §2.3 applies to all four su
 
 These directories exist as placeholders only. No code has been committed to them yet. The intended contents, per `docs/site-plan.md`, are:
 
-- `auth/` — Keycloak configuration (OIDC IdP, Apache 2.0 licensed) for SSO across all subdomains.
-- `parts/` — Directus instance backing a Nissan Stagea parts catalogue API.
+- `auth/` — **Keycloak OIDC IdP** configuration (Apache 2.0) for SSO across all subdomains.
+- `parts/` — **Directus Parts API** backing a Nissan Stagea parts catalogue.
 - `services/` — Per-service backend configs (e.g. `services/auth/`, `services/parts-api/`).
 - `packages/` — Shared TypeScript packages (`ui`, `auth-client`, `api-client`, `config`) consumed by the Astro shell and adapters.
 
-`infra/` already exists (see [`infra/README.md`](infra/README.md)) and currently holds the Compose override and wrapper that let Ghost run alongside the saleor-platform stack. The eventual root `compose.yaml`, `nginx/`, and TLS automation will land in the same directory.
+`infra/` already holds the production Phase 1 stack (`compose.yaml`, `Caddyfile`, `deploy.sh`) plus the local Ghost override (`blog-dev.sh`). It is not a placeholder. Operator runbook: [`docs/deployment/GO_LIVE.md`](docs/deployment/GO_LIVE.md).
 
-Opening a PR that scaffolds any of these should also update `docs/site-plan.md` to reflect reality.
+Opening a PR that scaffolds any of the empty directories should also update `docs/site-plan.md` to reflect reality.
 
 ## Docs
 
-- [`docs/site-plan.md`](docs/site-plan.md) — Target architecture: subdomains, identity layer, monorepo structure, shell.
+- [`docs/install-guides.md`](docs/install-guides.md) — From-zero hub: production go-live vs local clone, module index.
+- [`docs/architecture.md`](docs/architecture.md) — Request path, what we build vs official images, remaining gaps.
+- [`docs/site-plan.md`](docs/site-plan.md) — Target architecture SSOT: subdomains, identity layer, monorepo structure, shell.
+- [`docs/deployment/GO_LIVE.md`](docs/deployment/GO_LIVE.md) — Production operator runbook (`./infra/deploy.sh`).
 - [`docs/app_test_plan.md`](docs/app_test_plan.md) — Per-app smoke-test procedures (directory verification, install, build).
 - [`docs/shop-setup.md`](docs/shop-setup.md) — Saleor storefront submodule workflow and env vars.
 - [`docs/wiki_options.md`](docs/wiki_options.md) — MediaWiki extension picks and custom-plugin proposals.
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution rules specific to the MediaWiki instance.
-- [`infra/README.md`](infra/README.md) — Compose overrides and wrapper scripts that wire submodule stacks together.
-- [`shell/README.md`](shell/README.md) — Astro shell scaffold: stack choices, routes, future-extraction plan.
+- [`infra/README.md`](infra/README.md) — Production Compose, `deploy.sh`, and local Ghost wrappers.
+- [`shell/README.md`](shell/README.md) — Astro Shell: stack choices, routes, future-extraction plan.
 
 ## Contributing
 
@@ -248,4 +259,4 @@ Each submoduled upstream keeps its own license:
 - Ghost — MIT (`blog/LICENSE`)
 - Saleor Storefront — see `shop/LICENSE`
 
-The Stagea-specific glue (docs, skills, infra to be added) has no repo-level license file yet. Add one before any public release.
+The Stagea-specific glue (docs, skills, `infra/`, `shell/`) has no repo-level license file yet. Add one before any public release.

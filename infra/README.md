@@ -6,7 +6,7 @@ Stagea-monorepo infrastructure glue. Lives in the parent repo so it can be edite
 
 Production is **one** Compose file, **one** Caddy container on host ports `80`/`443`, and every other process on the internal `stagea-net` network. Only the **Astro Shell** is built from this repository. **Submodules** (`forum/`, `wiki/`, `blog/`, `shop/`) are not cloned, built, or bind-mounted in production — those services run official upstream images.
 
-Service map, named volumes, and phases: [production_plan.md §3](../docs/deployment/production_plan.md#3-service-map).
+Service map, named volumes, and phases: [production_plan.md §3](../docs/deployment/production_plan.md#3-service-map). After go-live (RAM/disk inequalities, 1,000+ users): [scaling_plan.md](../docs/deployment/scaling_plan.md).
 
 Apex is the Shell now (`https://stagea-stuff.com` → `shell:4321`). `infra/caddy/placeholder.html` is leftover from the edge-skeleton slice and is unused by Caddy.
 
@@ -15,7 +15,7 @@ Apex is the Shell now (`https://stagea-stuff.com` → `shell:4321`). `infra/cadd
 | Service | Image | Notes |
 | :--- | :--- | :--- |
 | `caddy` | `caddy:2.10-alpine` | Docker Hub. Admin API health on `:2019` is not published to the host. |
-| `shell` | `stagea-shell:local` (`build: ../shell`) | Only repo-built image. GHCR publish is slice 8. |
+| `shell` | `${SHELL_IMAGE}` default `ghcr.io/heff0/stagea-shell:main` | Published by [deploy.yml](../.github/workflows/deploy.yml) on `main`. `build: ../shell` remains a host fallback (`SHELL_IMAGE=stagea-shell:local` and `up --build`). See [ci-cd.md](../docs/deployment/ci-cd.md). |
 | `forum` | `ghcr.io/nodebb/nodebb:4.15` | **`nodebb/docker:4.4` does not exist** on Docker Hub (no 4.x tags). Official images moved to GitHub Container Registry. Pin is the current 4.x minor (`v4.15.0`, 2026-08-12). |
 | `forum-redis` | `redis:7.4-alpine` | AOF + `requirepass`. Redis hostname is the Compose service name `forum-redis`. |
 | `wiki` | `mediawiki:1.43` | Official LTS. Serves at `/` (document root), not `/w/`. |
@@ -45,7 +45,21 @@ From any cwd. The script resolves the repo root from its own path. It:
 ```bash
 ./infra/deploy.sh --check          # preflight only; no git, pull, or up
 ./infra/deploy.sh --skip-git-pull  # skip step 3 (pinned rollbacks)
+./infra/deploy.sh --module shell   # pull + up --no-deps shell only
+./infra/deploy.sh --module forum   # forum-redis, then forum (not wiki/caddy)
+./infra/deploy.sh --module wiki    # wiki; wiki-db only if missing/unhealthy
+./infra/deploy.sh --module wiki --with-db
+./infra/deploy.sh --module caddy   # reload Caddyfile, or recreate caddy only
 DEPLOY_HEALTH_TIMEOUT=300 ./infra/deploy.sh   # first-run NodeBB can exceed 120s
+```
+
+`--module` still preflights `.env` and Docker, pulls **only** the target services, `up -d --no-deps --remove-orphans` those services, and health-waits those services. It never `down`s the stack. CI path-filters and SSH are documented in [ci-cd.md](../docs/deployment/ci-cd.md).
+
+Rollback the Astro Shell without touching forum or wiki:
+
+```bash
+SHELL_IMAGE=ghcr.io/heff0/stagea-shell:<previous-sha> \
+  ./infra/deploy.sh --skip-git-pull --module shell
 ```
 
 The one command does **not** provision hosts, edit DNS, generate secrets, run the NodeBB or MediaWiki installers, or migrate data.
@@ -78,6 +92,8 @@ chmod 600 infra/.env
 ```
 
 `infra/.env` is gitignored. `infra/.env.example` is the inventory and is tracked. Placeholders for `AUTH_*` and `GHOST_CONTENT_API_KEY` are required keys with dummy values — do **not** start Ghost, Saleor, the Keycloak OIDC IdP, or the Directus Parts API in Phase 1.
+
+`SHELL_IMAGE` selects the Astro Shell tag (default `ghcr.io/heff0/stagea-shell:main`). CI sets it to the git SHA tag. Make the GHCR package public so the VPS can pull without a token; see [ci-cd.md](../docs/deployment/ci-cd.md). `OBJECT_STORAGE_*` is the disk-scale contract; uploads still live in named volumes until the [scaling plan](../docs/deployment/scaling_plan.md) disk inequality fires.
 
 ### First-run: NodeBB wizard
 
