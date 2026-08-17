@@ -1,6 +1,6 @@
 # Pre-traffic boot plan
 
-Ordered path from an empty VPS to a **full public community site** with backups proven, **before** inviting users. Complements [GO_LIVE.md](./GO_LIVE.md) (Phase 1 copy-paste) and the [slice cards](./cards/README.md).
+Ordered path from an empty VPS to a **full public community site** with backups proven, **before** inviting users. Complements [GO_LIVE.md](./GO_LIVE.md) (Phase 1 copy-paste) and the [slice cards](./cards/README.md). For numbered dual-track steps (Proxmox KVM + provider-agnostic VPS) and the security control matrix, use **[ROLLOUT_PLAN.md](./ROLLOUT_PLAN.md)** (it supersedes same-host restore-drill wording here until gate G3 lands).
 
 **Goal:** apex + forum + wiki + blog are live over HTTPS, backups restore, then open traffic. Shop / Keycloak / Directus are **not** required for that bar (Phase 3; see §6).
 

@@ -5,6 +5,7 @@ Copy-paste runbook for bringing `stagea-stuff.com` online. **How**, not why.
 - **From zero** (have you cloned yet?): [install-guides.md](../install-guides.md) — this runbook is Path A
 - **Why / what** (platform, service map, phases, backups): [Production Deployment Plan](./production_plan.md)
 - **Pre-traffic** (full community site + backups before invites): [BOOT_PLAN.md](./BOOT_PLAN.md)
+- **Dual-track rollout** (numbered Proxmox KVM + VPS-agnostic steps + security): [ROLLOUT_PLAN.md](./ROLLOUT_PLAN.md)
 - **After go-live** (when to resize, split, or cluster): [Scaling Plan](./scaling_plan.md)
 - **Implementation slices**: [Production Go-Live Sprint Cards](./cards/README.md)
 
