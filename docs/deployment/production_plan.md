@@ -410,6 +410,7 @@ These decisions are deliberately left to the agent or engineer who writes the co
 * 🔁 **[Per-module CI/CD](./ci-cd.md)** — Path-filtered GHCR publish and `--module` SSH (implemented in `.github/workflows/deploy.yml`).
 * 📋 **[Production Go-Live Sprint Cards](./cards/README.md)** — Implementation-ready cards for the eleven slices in §7.
 * 📈 **[Scaling Plan](./scaling_plan.md)** — RAM/disk inequalities, 1,000+ users, feature-growth cost, k3s as S3. Not a provider comparison.
+* 🚀 **[Pre-traffic Boot Plan](./BOOT_PLAN.md)** — Initial setup → Phase 1+blog → backups → open traffic; operator-blocked slice map.
 * 🚀 **[Development Stack Deployment Guide](./README.md)** — Local developer stack, host port matrix, and stack-wide troubleshooting. Local dev only.
 * 🛠 **[Per-Service Setup Guide](./services_setup.md)** — Per-submodule local setup and first-run steps.
 * 🐳 **[Astro Shell Production & Staging Deployment Guide](./shell_deployment.md)** — Shell image build, environment contract, graceful shutdown, and the optional nginx edge specification for later hardening.
