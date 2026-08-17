@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly Stagea restic backup timer
+
+[Timer]
+# Off-peak UTC; adjust for the host timezone if needed.
+OnCalendar=*-*-* 05:15:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

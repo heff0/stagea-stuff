@@ -81,7 +81,32 @@ docker compose -f infra/compose.yaml --env-file infra/.env logs -f <service>
 docker compose -f infra/compose.yaml --env-file infra/.env ps
 ```
 
-`./infra/backup.sh` / `./infra/restore.sh` are slice 7 — not here.
+### Backups (slice 7)
+
+Separate from `./infra/deploy.sh`. Capture floor: [production_plan.md §8](../docs/deployment/production_plan.md#8-backup-and-restore-minimum).
+
+```bash
+# once: install restic on the host, fill RESTIC_* + AWS_* in infra/.env
+./infra/backup.sh --init
+./infra/backup.sh            # dump + restic push + forget
+./infra/backup.sh --list
+
+# restore drill into a throwaway Compose project (type the snapshot id to confirm)
+./infra/restore.sh --list
+./infra/restore.sh <snapshot-id>
+```
+
+Nightly schedule is a **host systemd timer** (not a Compose sidecar — no `docker.sock`):
+
+```bash
+sudo cp infra/systemd/stagea-backup.service infra/systemd/stagea-backup.timer /etc/systemd/system/
+# edit User= / WorkingDirectory= if the clone is not /opt/stagea and user is not deploy
+sudo systemctl daemon-reload
+sudo systemctl enable --now stagea-backup.timer
+systemctl list-timers stagea-backup.timer
+```
+
+`RESTIC_PASSWORD` ≠ object-storage keys. Bucket provider ≠ VPS provider. Never `compose down -v` as a backup or restore step. `infra/.env` is not in the restic snapshot — password manager only.
 
 ### Secrets
 

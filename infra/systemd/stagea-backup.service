@@ -1,0 +1,33 @@
+# Host systemd units for nightly Stagea backups (slice 7).
+# Install on the VPS after restic is on PATH and infra/.env has RESTIC_*.
+#
+#   sudo cp infra/systemd/stagea-backup.service /etc/systemd/system/
+#   sudo cp infra/systemd/stagea-backup.timer /etc/systemd/system/
+#   # edit WorkingDirectory / User if the clone is not /opt/stagea
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now stagea-backup.timer
+#   systemctl list-timers stagea-backup.timer
+#
+# Why a host timer (not a Compose sidecar): no docker.sock mount, backup stays
+# outside deploy.sh, and the schedule survives compose down (without -v).
+
+[Unit]
+Description=Stagea platform restic backup
+Documentation=file:///opt/stagea/docs/deployment/production_plan.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/stagea
+# Load secrets from the same file Compose uses (mode 0600).
+EnvironmentFile=/opt/stagea/infra/.env
+ExecStart=/opt/stagea/infra/backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+# Do not restart forever on failure — timer will retry next night.
+Restart=no

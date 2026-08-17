@@ -2,7 +2,7 @@
 
 Vertical-slice cards for taking `stagea-stuff.com` live. The slice list and order are fixed in the [Production Deployment Plan §7](../production_plan.md#7-vertical-slices). Do not invent a different list or reorder.
 
-**Phase 1 slices 02–06 are implemented in the repo.** Slice 01 is documented; the operator performs it on the VPS. Slice 8 is partial (GHCR + per-module deploy; host `build:` remains as fallback). Slices 7 and 9–11 remain not started.
+**Phase 1 slices 02–06 are implemented in the repo.** Slice 01 is documented; the operator performs it on the VPS. Slice 7 (backup scripts + timer) is in the repo — restore drill still required on a host. Slice 8 is partial (GHCR + per-module deploy; host `build:` remains as fallback). Slices 9–11 remain not started.
 
 Cards follow the same shape as [Shell sprint cards](../../shell/cards/card_1_jwks_auth.md) and the [6-step feature loop](../../shell/TODO.md#1-the-6-step-developer-feature-loop). Glossary terms: **Astro Shell** / **Shell Edge**, **Keycloak OIDC IdP**, **Submodules**, **Directus Parts API** — see the [Documentation Guide](../../DOCUMENTATION_GUIDE.md#2-preventing-duplication--technical-term-shift).
 
@@ -31,7 +31,7 @@ Do not start Ghost, Saleor, the Keycloak OIDC IdP, or the Directus Parts API in 
 
 | Slice | Card | Phase | Status |
 | :--- | :--- | :--- | :--- |
-| 7 | [Backup Loop](./slice_07_backup_loop.md) | 2 (operability) | not started — deferred |
+| 7 | [Backup Loop](./slice_07_backup_loop.md) | 2 (operability) | implemented in repo (restore drill pending on host) |
 | 8 | [Image Supply Chain](./slice_08_image_supply_chain.md) | 2 (operability) | partial — GHCR + per-module deploy; `build:` fallback remains |
 | 9 | [Blog Node Online](./slice_09_blog_node_online.md) | 2 | not started — deferred |
 | 10 | [Observability Baseline](./slice_10_observability_baseline.md) | 2 (operability) | not started — deferred |

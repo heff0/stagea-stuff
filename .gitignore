@@ -77,3 +77,8 @@ __pycache__/
 *.original.md
 *.bak
 *.orig
+# Local backup/restore staging (infra/backup.sh, infra/restore.sh)
+/infra/.backup-staging/
+/var/tmp/stagea-backup/
+*.sql.gz
+wiki-mariadb.sql

@@ -17,7 +17,7 @@ plan or env placeholder mentions them.
 
 | Gap | Reality today |
 | :--- | :--- |
-| Backups | Slice 7 is a plan only. No `infra/backup.sh`, no `infra/restore.sh`, no nightly encrypted offsite dump. Named volumes persist on the VPS; that is not a backup. |
+| Backups | Slice 7 **in repo**. `infra/backup.sh` / `infra/restore.sh` + `infra/systemd/stagea-backup.timer`. Operator still must fill `RESTIC_*`, run `--init`, enable the timer, and complete a restore drill. |
 | GHCR / image supply chain | Slice 8 in repo. `deploy.yml` publishes `ghcr.io/heff0/stagea-shell` (`:<sha>` + `:main`). Compose uses `${SHELL_IMAGE}`; `build:` remains a host fallback. [ci-cd.md](./deployment/ci-cd.md). First merge still needs the GHCR package made public. |
 | Scaling after go-live | Decision record: [scaling_plan.md](./deployment/scaling_plan.md). Stay on Compose through 1,000 users unless RAM/disk inequalities fire. |
 | **Keycloak OIDC IdP** | `auth/` and `services/auth/` are empty. Phase 3 / slice 11. `AUTH_*` keys in `infra/.env.example` are placeholders so Compose can start — they do not start an IdP. |

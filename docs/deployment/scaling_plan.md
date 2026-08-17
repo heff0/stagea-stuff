@@ -181,7 +181,7 @@ These are in the repo so later stages change **where** a process runs, not **wha
 | Caddy is the only host `ports:` | `infra/compose.yaml` | Unchanged |
 | Ghost / Keycloak / Saleor / Directus absent | Phase 1 Compose | Enforced by slice 9 / 11 and §2 |
 | Object-storage env inventory | `OBJECT_STORAGE_*` in `.env.example` | Volumes still hold uploads until row 2 fires |
-| Restore drill | §9 below; scripts are slice 7 | Procedure exists; `backup.sh` is still deferred |
+| Restore drill | §9 below; `infra/backup.sh` / `infra/restore.sh` (slice 7) | Scripts in repo; host drill still required |
 
 Wiring MediaWiki and NodeBB to S3 plugins is **not** day 1. Day 1 is the env contract and the inequality that turns it on.
 
@@ -189,13 +189,13 @@ Wiring MediaWiki and NodeBB to S3 plugins is **not** day 1. Day 1 is the env con
 
 ## 9. Restore drill (reliability)
 
-Canonical capture list: [`production_plan.md` §8](./production_plan.md#8-backup-and-restore-minimum). Scripts: slice 7 (`infra/backup.sh` / `infra/restore.sh`) — not implemented yet.
+Canonical capture list: [`production_plan.md` §8](./production_plan.md#8-backup-and-restore-minimum). Scripts: `infra/backup.sh` / `infra/restore.sh` (slice 7). Nightly: `infra/systemd/stagea-backup.timer`.
 
-Until slice 7 lands, the drill is still defined:
+Drill:
 
-1. Take a snapshot of named volumes + logical DB dumps onto object storage at a **different provider than the VPS**.
-2. On the Proxmox staging VM (throwaway Compose project `-p stagea-restore`), restore the latest snapshot.
-3. `up` the stack; confirm a known forum post and a known wiki edit.
+1. Fill `RESTIC_*` + `AWS_*` in `infra/.env` (bucket provider ≠ VPS). `./infra/backup.sh --init` once, then `./infra/backup.sh`.
+2. On the Proxmox staging VM (or same host), `./infra/restore.sh <snapshot-id>` into project `stagea-restore` (default).
+3. Confirm a known forum post and a known wiki edit.
 4. Record wall-clock time. That number **is** the RTO. Target: < 2 hours. RPO: 24 hours.
 5. Repeat every quarter and after any volume-layout change.
 

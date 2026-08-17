@@ -398,7 +398,7 @@ These decisions are deliberately left to the agent or engineer who writes the co
 * Exact upstream image tags to pin for NodeBB, MediaWiki, MariaDB, Redis, Caddy, Ghost, and MySQL.
 * Whether MediaWiki's `LocalSettings.php` is volume-persisted or committed to `infra/` as a templated file with secrets injected from the environment.
 * Whether the Astro Shell health check is a dedicated endpoint or a `HEAD /` probe.
-* Whether backups run as a sidecar container in the Compose file or as a host systemd timer.
+* Whether backups run as a sidecar container in the Compose file or as a host systemd timer. **Resolved (slice 7): host systemd timer** (`infra/systemd/stagea-backup.timer`) + restic; not a sidecar.
 * The apex versus `app.` resolution described in §3, and the matching edit to the site-plan's subdomain map.
 
 ---
