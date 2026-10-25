@@ -8,6 +8,7 @@ Copy-paste runbook for bringing `stagea-stuff.com` online. **How**, not why.
 - **Dual-track rollout** (numbered Proxmox KVM + VPS-agnostic steps + security): [ROLLOUT_PLAN.md](./ROLLOUT_PLAN.md)
 - **After go-live** (when to resize, split, or cluster): [Scaling Plan](./scaling_plan.md)
 - **Implementation slices**: [Production Go-Live Sprint Cards](./cards/README.md)
+- **Blog node** (slice 9 operator launch: database keys, DNS, Ghost owner, Content API key, mail, backup drill): [LAUNCH_GUIDE.md](./LAUNCH_GUIDE.md)
 
 Local development is a different target — see [Development Stack Deployment Guide](./README.md#0-local-development-vs-production--read-this-first).
 
@@ -239,6 +240,7 @@ curl -I https://app.stagea-stuff.com   # skip if no app record
 * [Per-module CI/CD](./ci-cd.md) — path filters, GHCR, SSH secrets, rollback
 * [Production Deployment Plan](./production_plan.md) — plan of record
 * [Production Go-Live Sprint Cards](./cards/README.md) — slice PRDs
+* [Blog node launch guide](./LAUNCH_GUIDE.md) — slice 9 operator steps after Phase 1
 * [Development Stack Deployment Guide](./README.md) — local dev only
 * [Platform Master Site-Plan](../site-plan.md) — subdomain map SSOT
 * [Documentation Guide](../DOCUMENTATION_GUIDE.md) — glossary and SSOT rule

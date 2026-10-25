@@ -2,7 +2,8 @@
 
 **Status**: implemented in repo — operator still does DNS `blog`, the `/ghost/` owner, and `GHOST_CONTENT_API_KEY`  
 **Phase 1 go-live**: no  
-**Depends on**: [Slice 6 — One-Command Contract](./slice_06_one_command_contract.md)
+**Depends on**: [Slice 6 — One-Command Contract](./slice_06_one_command_contract.md)  
+**Operator launch**: [LAUNCH_GUIDE.md](../LAUNCH_GUIDE.md) — database keys, DNS, owner, Content API key, SMTP later, backup and restore drill. Checklist items 4 and 6 below stay open.
 
 ---
 
