@@ -4,13 +4,15 @@ Stagea-monorepo infrastructure glue. Lives in the parent repo so it can be edite
 
 ## Production Compose (Phase 1)
 
-Production is **one** Compose file, **one** Caddy container on host ports `80`/`443`, and every other process on the internal `stagea-net` network. Only the **Astro Shell** is built from this repository. **Submodules** (`forum/`, `wiki/`, `blog/`, `shop/`) are not cloned, built, or bind-mounted in production — those services run official upstream images.
+Production is **one** Compose file, **one** Caddy container on host ports `80`/`443`, and every other process on the internal `stagea-net` network. Only the **Astro Shell** is built from this repository. **Submodules** (`forum/`, `wiki/`, `blog/`, `shop/`) are not cloned, built, or bind-mounted in production — those services run official upstream images. Ghost and MySQL (slice 9) live in this same file.
 
 Service map, named volumes, and phases: [production_plan.md §3](../docs/deployment/production_plan.md#3-service-map). After go-live (RAM/disk inequalities, 1,000+ users): [scaling_plan.md](../docs/deployment/scaling_plan.md).
 
 Apex is the Shell now (`https://stagea-stuff.com` → `shell:4321`). `infra/caddy/placeholder.html` is leftover from the edge-skeleton slice and is unused by Caddy.
 
-### Image pins (confirmed 2026-08-16)
+### Image pins
+
+Phase 1 pins confirmed 2026-08-16. Ghost `6.72` and MySQL `8.4` confirmed 2026-10-24.
 
 | Service | Image | Notes |
 | :--- | :--- | :--- |
@@ -20,6 +22,8 @@ Apex is the Shell now (`https://stagea-stuff.com` → `shell:4321`). `infra/cadd
 | `forum-redis` | `redis:7.4-alpine` | AOF + `requirepass`. Redis hostname is the Compose service name `forum-redis`. |
 | `wiki` | `mediawiki:1.43` | Official LTS. Serves at `/` (document root), not `/w/`. |
 | `wiki-db` | `mariadb:11.4` | Official LTS. No host port. |
+| `blog` | `ghost:6.72` | Official minor (2026-10). Not `:6` or `:latest`. Listens on `2368` inside the network only. |
+| `blog-db` | `mysql:8.4` | Official 8.4 LTS minor. Not `:8`, `:lts` (that tag is 9.x), or `:latest`. No host port. |
 
 Never `:latest`. Never `docker compose down -v` (that deletes named volumes).
 
@@ -38,7 +42,7 @@ From any cwd. The script resolves the repo root from its own path. It:
 3. `git pull --ff-only` on the current branch.
 4. `docker compose -f infra/compose.yaml --env-file infra/.env pull`
 5. `docker compose -f infra/compose.yaml --env-file infra/.env up -d --remove-orphans`
-6. Waits until `caddy`, `shell`, `forum`, `forum-redis`, `wiki`, and `wiki-db` are `healthy` (default 120s; override with `DEPLOY_HEALTH_TIMEOUT`).
+6. Waits until `caddy`, `shell`, `forum`, `forum-redis`, `wiki`, `wiki-db`, `blog`, and `blog-db` are `healthy` (default 120s; override with `DEPLOY_HEALTH_TIMEOUT`). First Ghost boot often needs `DEPLOY_HEALTH_TIMEOUT=300`.
 7. Prints a summary table (service, health, image, public URL).
 8. Exits non-zero if anything is unhealthy — and does **not** `down` the stack.
 
@@ -49,6 +53,8 @@ From any cwd. The script resolves the repo root from its own path. It:
 ./infra/deploy.sh --module forum   # forum-redis, then forum (not wiki/caddy)
 ./infra/deploy.sh --module wiki    # wiki; wiki-db only if missing/unhealthy
 ./infra/deploy.sh --module wiki --with-db
+./infra/deploy.sh --module blog    # blog; blog-db only if missing/unhealthy
+./infra/deploy.sh --module blog --with-db
 ./infra/deploy.sh --module caddy   # reload Caddyfile, or recreate caddy only
 DEPLOY_HEALTH_TIMEOUT=300 ./infra/deploy.sh   # first-run NodeBB can exceed 120s
 ```
@@ -62,7 +68,7 @@ SHELL_IMAGE=ghcr.io/heff0/stagea-shell:<previous-sha> \
   ./infra/deploy.sh --skip-git-pull --module shell
 ```
 
-The one command does **not** provision hosts, edit DNS, generate secrets, run the NodeBB or MediaWiki installers, or migrate data.
+The one command does **not** provision hosts, edit DNS, generate secrets, run the NodeBB, MediaWiki, or Ghost installers, or migrate data. A Caddyfile change on an already-running edge does not apply until `./infra/deploy.sh --module caddy` (plain `up -d` does not reload the bind-mounted file).
 
 ### Escape hatch
 
@@ -116,7 +122,7 @@ cp infra/.env.example infra/.env
 chmod 600 infra/.env
 ```
 
-`infra/.env` is gitignored. `infra/.env.example` is the inventory and is tracked. Placeholders for `AUTH_*` and `GHOST_CONTENT_API_KEY` are required keys with dummy values — do **not** start Ghost, Saleor, the Keycloak OIDC IdP, or the Directus Parts API in Phase 1.
+`infra/.env` is gitignored. `infra/.env.example` is the inventory and is tracked. `AUTH_*` stay placeholders — do **not** start Saleor, the Keycloak OIDC IdP, or the Directus Parts API. `GHOST_CONTENT_API_KEY` must be non-empty (`change-me` until the owner wizard). `BLOG_DB_*` are required and must be unique passwords before the next `./infra/deploy.sh`. Ghost mail is explicitly disabled (`mail__transport=stub` plus staff device verification off).
 
 `SHELL_IMAGE` selects the Astro Shell tag (default `ghcr.io/heff0/stagea-shell:main`). CI sets it to the git SHA tag. Make the GHCR package public so the VPS can pull without a token; see [ci-cd.md](../docs/deployment/ci-cd.md). `OBJECT_STORAGE_*` is the disk-scale contract; uploads still live in named volumes until the [scaling plan](../docs/deployment/scaling_plan.md) disk inequality fires.
 
@@ -153,9 +159,27 @@ docker compose -f infra/compose.yaml --env-file infra/.env restart wiki
 
 Subsequent restarts pick the file up from `wiki_config`. Images persist in `wiki_images`.
 
+### First-run: Ghost owner
+
+One-time, human. See [production_plan.md §5.5](../docs/deployment/production_plan.md#55-per-application-bootstrap-one-time-interactive).
+
+1. DNS `A`/`AAAA` for `blog` → the VPS. Confirm with `dig +short blog.stagea-stuff.com` before Caddy asks Let's Encrypt for that name.
+2. Add `BLOG_DB_NAME`, `BLOG_DB_USER`, `BLOG_DB_PASSWORD`, and `BLOG_DB_ROOT_PASSWORD` to `infra/.env` (unique; `openssl rand -base64 32`). Do not reuse the wiki passwords.
+3. `DEPLOY_HEALTH_TIMEOUT=300 ./infra/deploy.sh`. If Caddy was already running, also `./infra/deploy.sh --skip-git-pull --module caddy` so `blog.stagea-stuff.com` is loaded.
+4. Open `https://blog.stagea-stuff.com/ghost/` and create the owner account.
+5. In Ghost admin, create a Content API key (Settings → Integrations → custom integration). Put it in `infra/.env` as `GHOST_CONTENT_API_KEY`, then `./infra/deploy.sh --skip-git-pull --module shell`.
+
+Database host inside Compose is `blog-db` (not `localhost`). Database name, user, and password are `BLOG_DB_*`. Nothing publishes host port `2368` or MySQL `3306`.
+
+Content persists in `blog_content` (`/var/lib/ghost/content`). MySQL data is in `blog_db_data`. `./infra/backup.sh` runs `mysqldump --single-transaction` and tars both volumes. `./infra/restore.sh` restores `blog_content` and imports `blog-mysql.sql` (it does not unpack `blog_db_data` over a live data directory).
+
+Mail is **explicitly disabled**: `mail__transport=stub` (nodemailer accepts and drops) and `security__staffDeviceVerification=false`, so owner setup does not wait on a mailer that cannot send. Do not switch this to `Direct` — the image has no sendmail, and that fails quietly. To enable delivery, set SMTP (`mail__transport=SMTP` plus `mail__options__*`) and only then turn staff device verification back on.
+
+The Shell already receives `GHOST_CONTENT_API_KEY` and `BLOG_URL`. Search calls the Content API. The home page does not yet render post summaries; that still needs a Shell change after the real key is in `.env`.
+
 ### Health
 
-`GET`/`HEAD` `https://stagea-stuff.com/healthz` returns `200` and `ok` (no auth). Every Phase 1 service has a Compose `healthcheck` so `deploy.sh` can wait.
+`GET`/`HEAD` `https://stagea-stuff.com/healthz` returns `200` and `ok` (no auth). Every production service in `infra/compose.yaml`, including `blog` and `blog-db`, has a Compose `healthcheck` so `deploy.sh` can wait.
 
 ---
 

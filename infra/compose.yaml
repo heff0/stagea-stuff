@@ -1,9 +1,9 @@
-# Production Compose for stagea-stuff.com (Phase 1).
+# Production Compose for stagea-stuff.com (Phase 1 + blog).
 # Invoke from the repository root:
 #   docker compose -f infra/compose.yaml --env-file infra/.env up -d
 # Only Caddy publishes host ports (80/443). Everything else is internal.
-# Do not add Ghost, Saleor, Keycloak, or Directus here — see
-# docs/deployment/scaling_plan.md (feature-growth RAM) and slice 9 / 11.
+# Do not add Saleor, Keycloak, or Directus here — see
+# docs/deployment/scaling_plan.md (feature-growth RAM) and slice 11.
 
 name: stagea
 
@@ -182,6 +182,75 @@ services:
       start_period: 45s
     logging: *default-logging
 
+  blog-db:
+    # Official MySQL 8.4 LTS minor. Not :8 (major float), :lts (currently 9.x), or :latest.
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${BLOG_DB_NAME}
+      MYSQL_USER: ${BLOG_DB_USER}
+      MYSQL_PASSWORD: ${BLOG_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BLOG_DB_ROOT_PASSWORD}
+    expose: ["3306"]
+    volumes:
+      - blog_db_data:/var/lib/mysql
+    networks: [stagea-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${BLOG_DB_ROOT_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+
+  blog:
+    # Official Ghost minor. Do not build the blog/ Submodule. Never :latest or :6 (major float).
+    image: ghost:6.72
+    restart: unless-stopped
+    depends_on:
+      blog-db:
+        condition: service_healthy
+    expose: ["2368"]
+    environment:
+      # Public origin, no trailing slash. Shell nav keeps BLOG_URL (slash is fine there).
+      url: https://blog.stagea-stuff.com
+      database__client: mysql
+      database__connection__host: blog-db
+      database__connection__port: "3306"
+      database__connection__user: ${BLOG_DB_USER}
+      database__connection__password: ${BLOG_DB_PASSWORD}
+      database__connection__database: ${BLOG_DB_NAME}
+      # Explicitly off. "Direct" would call sendmail, which this image does not have.
+      # nodemailer stub accepts messages and does not deliver them.
+      mail__transport: stub
+      # Owner login must not require an email code while mail is stubbed.
+      security__staffDeviceVerification: "false"
+    volumes:
+      - blog_content:/var/lib/ghost/content
+    networks: [stagea-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:2368/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging: *default-logging
+
 volumes:
   caddy_data:
   caddy_config:
@@ -191,3 +260,5 @@ volumes:
   wiki_images:
   wiki_config:
   wiki_db_data:
+  blog_content:
+  blog_db_data:

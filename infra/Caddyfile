@@ -26,3 +26,8 @@ wiki.stagea-stuff.com {
 	reverse_proxy wiki:80
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 }
+
+blog.stagea-stuff.com {
+	reverse_proxy blog:2368
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+}

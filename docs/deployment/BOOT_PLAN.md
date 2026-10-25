@@ -29,7 +29,7 @@ If someone said “submodules are on the VPS,” treat that as: **the monorepo i
 | 2–6 | Edge → one-command | No (repo done) | Operator still runs DNS + first `./infra/deploy.sh` + NodeBB/MediaWiki wizards |
 | 7 | Backup Loop | **Yes** (scripts done) | Fill `RESTIC_*` / `AWS_*`, `restic` on host, `--init`, enable timer, **restore drill** |
 | 8 | Image Supply Chain | **Yes** (partial) | Make GHCR package public (or `docker login`); prove pull + SHA rollback. Repo/CI already publish |
-| 9 | Blog Node Online | **No — repo blocked first** | Compose/Caddy/env/deploy.sh not implemented yet. Then operator: DNS `blog`, Ghost owner wizard, Content API key |
+| 9 | Blog Node Online | **Yes** (repo done) | Operator: DNS `blog`, Ghost owner wizard, Content API key. Mail is stub-disabled in Compose |
 | 10 | Observability | **Mixed** | Repo: healthchecks exist; missing uptime probe + disk alert wiring. Operator: pick monitor + alert destination |
 | 11 | Identity + Commerce | **Blocked by policy + repo** | Do not start until ≥2 Phase 1 services have real users. Saleor roughly doubles RAM — not part of pre-traffic community bar |
 
@@ -82,7 +82,7 @@ Checklist: [GO_LIVE.md §3](./GO_LIVE.md#3-initial-setup-one-time) / [slice 01](
 
 ### Phase C — Blog (repo then operator)
 
-**Repo (before or on the VPS clone that includes the PR):** land [slice 09](./cards/slice_09_blog_node_online.md) — Ghost + MySQL in Compose, Caddy route, deploy.sh health keys, pin tags. Extend [backup.sh](../../infra/backup.sh) for `blog_content` / `blog_db_data` + `mysqldump` in the same change.
+**Repo:** [slice 09](./cards/slice_09_blog_node_online.md) is in the repo — Ghost + MySQL in Compose, Caddy route, deploy.sh health keys, pin tags, and [backup.sh](../../infra/backup.sh) coverage for `blog_content` / `blog_db_data` + `mysqldump`.
 
 **Operator:**
 

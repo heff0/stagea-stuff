@@ -13,13 +13,15 @@ Usage: ./infra/deploy.sh [--check] [--skip-git-pull] [--module NAME] [--with-db]
               Skip git pull --ff-only (pinned rollbacks, or when CI already synced the checkout)
   --module NAME
               Deploy only that module. Does not recreate other services.
-              NAME is one of: shell | forum | wiki | caddy
-  --with-db   With --module wiki, also bounce wiki-db even if it is already healthy
+              NAME is one of: shell | forum | wiki | blog | caddy
+  --with-db   With --module wiki or blog, also bounce that module's database
+              even if it is already healthy
 
 Module targets:
   shell   pull + up --no-deps shell
   forum   forum-redis then forum (forum depends on redis)
   wiki    wiki only; wiki-db only if missing/unhealthy, or --with-db
+  blog    blog only; blog-db only if missing/unhealthy, or --with-db
   caddy   reload Caddyfile in-place, or recreate caddy only
 
 Escape hatch (always sufficient):
@@ -39,7 +41,7 @@ ENV_FILE="infra/.env"
 COMPOSE_FILE="infra/compose.yaml"
 COMPOSE=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 
-SERVICES=(caddy shell forum forum-redis wiki wiki-db)
+SERVICES=(caddy shell forum forum-redis wiki wiki-db blog blog-db)
 TARGET_SERVICES=("${SERVICES[@]}")
 
 public_url() {
@@ -47,6 +49,7 @@ public_url() {
     shell) echo "https://stagea-stuff.com" ;;
     forum) echo "https://forum.stagea-stuff.com" ;;
     wiki) echo "https://wiki.stagea-stuff.com" ;;
+    blog) echo "https://blog.stagea-stuff.com" ;;
     *) echo "—" ;;
   esac
 }
@@ -70,6 +73,10 @@ REQUIRED_KEYS=(
   WIKI_DB_USER
   WIKI_DB_PASSWORD
   WIKI_DB_ROOT_PASSWORD
+  BLOG_DB_NAME
+  BLOG_DB_USER
+  BLOG_DB_PASSWORD
+  BLOG_DB_ROOT_PASSWORD
 )
 
 CHECK=0
@@ -84,7 +91,7 @@ while [[ $# -gt 0 ]]; do
     --with-db) WITH_DB=1; shift ;;
     --module)
       if [[ $# -lt 2 ]]; then
-        echo "error: --module requires a value: shell|forum|wiki|caddy" >&2
+        echo "error: --module requires a value: shell|forum|wiki|blog|caddy" >&2
         usage >&2
         exit 1
       fi
@@ -105,16 +112,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$MODULE" in
-  ""|shell|forum|wiki|caddy) ;;
+  ""|shell|forum|wiki|blog|caddy) ;;
   *)
-    echo "error: unknown --module: ${MODULE} (want shell|forum|wiki|caddy)" >&2
+    echo "error: unknown --module: ${MODULE} (want shell|forum|wiki|blog|caddy)" >&2
     usage >&2
     exit 1
     ;;
 esac
 
-if (( WITH_DB == 1 )) && [[ "$MODULE" != "wiki" ]]; then
-  echo "error: --with-db is only valid with --module wiki" >&2
+if (( WITH_DB == 1 )) && [[ "$MODULE" != "wiki" && "$MODULE" != "blog" ]]; then
+  echo "error: --with-db is only valid with --module wiki or --module blog" >&2
   exit 1
 fi
 
@@ -295,6 +302,22 @@ resolve_targets() {
         fi
       fi
       ;;
+    blog)
+      if (( WITH_DB == 1 )); then
+        echo "blog-db included (--with-db)"
+        TARGET_SERVICES=(blog-db blog)
+      else
+        local db_health
+        db_health="$(health_of blog-db)"
+        if [[ "$db_health" == "healthy" ]]; then
+          echo "blog-db is healthy; leaving it running (pass --with-db to bounce it)"
+          TARGET_SERVICES=(blog)
+        else
+          echo "blog-db is ${db_health}; including blog-db in this deploy"
+          TARGET_SERVICES=(blog-db blog)
+        fi
+      fi
+      ;;
   esac
 }
 
@@ -311,7 +334,7 @@ up_no_deps() {
   local svc
   for svc in "$@"; do
     echo "Starting ${svc} (--no-deps; other services left running)"
-    if [[ "$MODULE" == "wiki" && "$svc" == "wiki-db" && "$WITH_DB" -eq 1 ]]; then
+    if [[ "$WITH_DB" -eq 1 ]] && { [[ "$MODULE" == "wiki" && "$svc" == "wiki-db" ]] || [[ "$MODULE" == "blog" && "$svc" == "blog-db" ]]; }; then
       "${COMPOSE[@]}" up -d --no-deps --force-recreate --remove-orphans "$svc"
     else
       "${COMPOSE[@]}" up -d --no-deps --remove-orphans "$svc"
@@ -363,6 +386,13 @@ up_module() {
         wait_one wiki-db
       fi
       up_no_deps wiki
+      ;;
+    blog)
+      if [[ "${TARGET_SERVICES[0]}" == "blog-db" ]]; then
+        up_no_deps blog-db
+        wait_one blog-db
+      fi
+      up_no_deps blog
       ;;
   esac
 }

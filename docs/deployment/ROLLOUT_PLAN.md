@@ -100,7 +100,7 @@ Numbered steps to bring the **full community website** online securely, on eithe
 | **V10** | NodeBB wizard: Redis `forum-redis`, password from `.env`, URL `https://forum.stagea-stuff.com`. | Admin login; known test post |
 | **V11** | MediaWiki installer: DB `wiki-db`. Download `LocalSettings.php` in the browser → **scp to the VPS** → `compose cp` into `wiki:/persist/LocalSettings.php` → `restart wiki`. Never `cp` onto `/var/www/html/LocalSettings.php` (lost on restart). See [GO_LIVE.md §5.2](./GO_LIVE.md#52-mediawiki) and [infra/README.md](../../infra/README.md). | Known wiki edit persists across restart |
 | **V12** | Verify Phase 1: `/healthz`, forum, wiki; `compose config` shows no host ports except Caddy; reboot host once. | All green; **no** public invites yet |
-| **V13** | After **G1** is merged: `git pull` on the VPS. (No `--module blog` today — full-stack deploy in V14.) | Compose lists blog services; `backup.sh` knows blog volumes |
+| **V13** | After **G1** is merged: `git pull` on the VPS. `--module blog` exists; V14 is still the first blog boot (DNS + full deploy). | Compose lists blog services; `backup.sh` knows blog volumes |
 | **V14** | DNS `blog` → VPS; `DEPLOY_HEALTH_TIMEOUT=300 ./infra/deploy.sh`; Ghost owner at `/ghost/`; set `GHOST_CONTENT_API_KEY`; email works **or** explicitly disabled. | `https://blog.stagea-stuff.com` + Shell summaries |
 | **V15** | Prove GHCR pull + SHA rollback via `--module shell`. Leave `SHELL_IMAGE` pinned to the verified SHA in `infra/.env` (not floating `:main`). | Forum/wiki not recreated; SHA pin recorded |
 | **V16** | Install `restic`. Fill `RESTIC_*` / `AWS_*` (bucket provider **≠** VPS). `./infra/backup.sh --init` then `./infra/backup.sh`. | `./infra/backup.sh --list` shows a snapshot |

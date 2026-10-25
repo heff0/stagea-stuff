@@ -1,6 +1,6 @@
 # Slice 9 — Blog Node Online
 
-**Status**: not started — deferred (Phase 2)  
+**Status**: implemented in repo — operator still does DNS `blog`, the `/ghost/` owner, and `GHOST_CONTENT_API_KEY`  
 **Phase 1 go-live**: no  
 **Depends on**: [Slice 6 — One-Command Contract](./slice_06_one_command_contract.md)
 
@@ -14,7 +14,9 @@ Do not start this until Phase 1 (slices 01–06) is green. Saleor, the Keycloak 
 
 ---
 
-## 🛠 2. Technical Blueprint (deferred)
+## 🛠 2. Technical Blueprint
+
+Landed in repo: `ghost:6.72` and `mysql:8.4` on `stagea-net` (no host ports); volumes `blog_content` and `blog_db_data`; Caddy `blog.stagea-stuff.com` → `blog:2368`; `deploy.sh` required `BLOG_DB_*` keys, full-stack health-wait, and `--module blog` (`--with-db` bounces `blog-db`). `backup.sh` runs `mysqldump --single-transaction` and tars both volumes; `restore.sh` imports `blog-mysql.sql` and restores `blog_content`. Mail is explicitly disabled (`mail__transport=stub`, `security__staffDeviceVerification=false`) — not sendmail/`Direct`. `GHOST_CONTENT_API_KEY` stays `change-me` in the example until the owner wizard. The Shell home page does not render post summaries yet.
 
 | Path | Action (when this slice starts) |
 | :--- | :--- |
@@ -40,12 +42,12 @@ First-run: visit `/ghost/`, create the owner, put the Content API key in `infra/
 
 ## 🚦 4. 6-Step Feature Loop Checklist
 
-- [ ] **1. Scaffold**: `blog` + `blog-db` service drafts; Caddy site.
-- [ ] **2. Document**: `infra/README.md` owner bootstrap ([§5.5](../production_plan.md#55-per-application-bootstrap-one-time-interactive)).
-- [ ] **3. MVP Spec**: The four criteria above.
-- [ ] **4. Test**: Publish a post → `down` (no `-v`) → `deploy.sh` → post + Shell summary remain.
-- [ ] **5. Implement**: Pins, volumes, key in Shell env, email decision.
-- [ ] **6. Review**: No Submodule build; Phase 2 content complete.
+- [x] **1. Scaffold**: `blog` + `blog-db` service drafts; Caddy site.
+- [x] **2. Document**: `infra/README.md` owner bootstrap ([§5.5](../production_plan.md#55-per-application-bootstrap-one-time-interactive)).
+- [x] **3. MVP Spec**: The four criteria above.
+- [ ] **4. Test**: Publish a post → `down` (no `-v`) → `deploy.sh` → post + Shell summary remain. Not run in this change (needs the VPS).
+- [x] **5. Implement**: Pins, volumes, key in Shell env, email decision (`stub`, device verification off).
+- [ ] **6. Review**: No Submodule build in this change. Phase 2 content is not complete until the operator bootstrap and the persistence test.
 
 ---
 

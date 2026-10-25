@@ -2,7 +2,7 @@
 
 Vertical-slice cards for taking `stagea-stuff.com` live. The slice list and order are fixed in the [Production Deployment Plan §7](../production_plan.md#7-vertical-slices). Do not invent a different list or reorder.
 
-**Phase 1 slices 02–06 are implemented in the repo.** Slice 01 is documented; the operator performs it on the VPS. Slice 7 (backup scripts + timer) is in the repo — restore drill still required on a host. Slice 8 is partial (GHCR + per-module deploy; host `build:` remains as fallback). Slices 9–11 remain not started.
+**Phase 1 slices 02–06 are implemented in the repo.** Slice 01 is documented; the operator performs it on the VPS. Slice 7 (backup scripts + timer) is in the repo — restore drill still required on a host. Slice 8 is partial (GHCR + per-module deploy; host `build:` remains as fallback). Slice 9 (blog) is implemented in the repo; the operator still does DNS, the Ghost owner wizard, and the Content API key. Slices 10–11 remain not started.
 
 **Pre-traffic path** (initial setup → full community site → backups → invite users): **[BOOT_PLAN.md](../BOOT_PLAN.md)**. Numbered dual-track (Proxmox + VPS): **[ROLLOUT_PLAN.md](../ROLLOUT_PLAN.md)**.
 
@@ -20,7 +20,7 @@ The subdomain-to-service map, image provenance, and named volumes live in [produ
 | 2–6 | Edge → one-command | Repo done; **first deploy is operator** | DNS, `.env`, NodeBB/MediaWiki wizards |
 | 7 | [Backup Loop](./slice_07_backup_loop.md) | **Yes** (scripts done) | `RESTIC_*`, timer enable, restore drill |
 | 8 | [Image Supply Chain](./slice_08_image_supply_chain.md) | **Yes** (partial) | GHCR visibility / login; prove pull + rollback |
-| 9 | [Blog Node Online](./slice_09_blog_node_online.md) | **No — repo first** | Then operator DNS + Ghost wizard + API key |
+| 9 | [Blog Node Online](./slice_09_blog_node_online.md) | **Yes** (repo done) | DNS `blog`, Ghost owner wizard, Content API key. Mail is stub-disabled in Compose |
 | 10 | [Observability Baseline](./slice_10_observability_baseline.md) | Mixed | Repo alerts + operator monitor account |
 | 11 | [Identity and Commerce](./slice_11_identity_and_commerce.md) | Policy + repo | After real users; not pre-traffic |
 
@@ -49,7 +49,7 @@ Do not start Ghost, Saleor, the Keycloak OIDC IdP, or the Directus Parts API in 
 | :--- | :--- | :--- | :--- |
 | 7 | [Backup Loop](./slice_07_backup_loop.md) | 2 (operability) | implemented in repo (restore drill pending on host) |
 | 8 | [Image Supply Chain](./slice_08_image_supply_chain.md) | 2 (operability) | partial — GHCR + per-module deploy; `build:` fallback remains |
-| 9 | [Blog Node Online](./slice_09_blog_node_online.md) | 2 | not started — deferred |
+| 9 | [Blog Node Online](./slice_09_blog_node_online.md) | 2 | implemented in repo (operator: DNS, owner, Content API key) |
 | 10 | [Observability Baseline](./slice_10_observability_baseline.md) | 2 (operability) | not started — deferred |
 | 11 | [Identity and Commerce](./slice_11_identity_and_commerce.md) | 3 | not started — deferred |
 

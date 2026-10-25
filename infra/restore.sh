@@ -18,8 +18,8 @@ Usage: ./infra/restore.sh [--list] [--help] <snapshot-id>
 Steps this script performs:
   1. restic restore into a staging directory
   2. Load volume tars into {project}_* named volumes
-  3. Import wiki MariaDB dump into wiki-db (project must be up)
-  4. Print verify checklist (forum post + wiki edit) and wall-clock hint
+  3. Import wiki MariaDB dump into wiki-db and blog MySQL dump into blog-db
+  4. Print verify checklist (forum post + wiki edit + blog post) and wall-clock hint
 
 Does NOT:
   - Run compose down -v
@@ -147,21 +147,29 @@ untar_volume wiki_images "${VOLS}/wiki_images.tar.gz"
 untar_volume wiki_config "${VOLS}/wiki_config.tar.gz"
 untar_volume caddy_data "${VOLS}/caddy_data.tar.gz"
 untar_volume caddy_config "${VOLS}/caddy_config.tar.gz"
-# Prefer logical dump for MariaDB; optional data-dir tar is forensic only.
-# Do not untar wiki_db_data over a live InnoDB dir — import SQL instead.
+untar_volume blog_content "${VOLS}/blog_content.tar.gz"
+# Prefer logical dumps for MariaDB and MySQL; data-dir tars are forensic only.
+# Do not untar wiki_db_data or blog_db_data over a live InnoDB/MySQL dir.
 
 COMPOSE=(docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 
-echo "→ start wiki-db (+ redis) in project $PROJECT for SQL import"
-"${COMPOSE[@]}" up -d wiki-db forum-redis
+echo "→ start wiki-db, blog-db (+ redis) in project $PROJECT for SQL import"
+"${COMPOSE[@]}" up -d wiki-db blog-db forum-redis
 
-echo "→ wait for wiki-db healthy"
+echo "→ wait for wiki-db and blog-db healthy"
 for _ in $(seq 1 60); do
-  cid="$("${COMPOSE[@]}" ps -q wiki-db 2>/dev/null || true)"
-  if [[ -n "$cid" ]]; then
-    st="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || true)"
-    [[ "$st" == "healthy" || "$st" == "running" ]] && break
-  fi
+  ready=0
+  for svc in wiki-db blog-db; do
+    cid="$("${COMPOSE[@]}" ps -q "$svc" 2>/dev/null || true)"
+    st=""
+    if [[ -n "$cid" ]]; then
+      st="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || true)"
+    fi
+    if [[ "$st" == "healthy" || "$st" == "running" ]]; then
+      ready=$((ready + 1))
+    fi
+  done
+  [[ "$ready" -eq 2 ]] && break
   sleep 2
 done
 
@@ -184,6 +192,25 @@ else
   echo "warn: no wiki-mariadb.sql in snapshot" >&2
 fi
 
+blog_db="$(grep -E '^BLOG_DB_NAME=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+blog_user="$(grep -E '^BLOG_DB_USER=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+blog_pass="$(grep -E '^BLOG_DB_PASSWORD=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+blog_db="${blog_db%\"}"
+blog_db="${blog_db#\"}"
+blog_user="${blog_user%\"}"
+blog_user="${blog_user#\"}"
+blog_pass="${blog_pass%\"}"
+blog_pass="${blog_pass#\"}"
+
+if [[ -f "${DUMPS}/blog-mysql.sql" ]]; then
+  echo "→ import MySQL dump"
+  "${COMPOSE[@]}" exec -T blog-db \
+    mysql -u"$blog_user" -p"$blog_pass" "$blog_db" \
+    <"${DUMPS}/blog-mysql.sql"
+else
+  echo "warn: no blog-mysql.sql in snapshot" >&2
+fi
+
 echo "→ bring full throwaway stack up"
 "${COMPOSE[@]}" up -d --remove-orphans
 
@@ -200,7 +227,8 @@ restore ok
 Verify (production_plan §8):
   1. A known forum post is present on forum in this project
   2. A known wiki edit is present
-  3. Compare elapsed seconds to the 2-hour RTO target
+  3. A known blog post is present (snapshots taken after slice 9)
+  4. Compare elapsed seconds to the 2-hour RTO target
 
 Tear down throwaway (does NOT use -v unless you add it — avoid -v on production):
   docker compose -p $PROJECT -f infra/compose.yaml --env-file infra/.env down

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Phase 1 backup: logical dumps, then restic push of dumps + named-volume tars.
+# Logical dumps, then restic push of dumps + named-volume tars.
+# Includes Ghost MySQL + blog_content / blog_db_data (slice 9).
 # Separate from deploy.sh. Canonical capture list: docs/deployment/production_plan.md §8
 #
 # Prerequisites on the host: restic, docker compose v2, infra/.env filled.
@@ -10,7 +11,7 @@ usage() {
   cat <<'EOF'
 Usage: ./infra/backup.sh [--init] [--list] [--help]
 
-  (default)  Dump MariaDB + Redis BGSAVE, tar named volumes, restic backup, forget
+  (default)  Dump MariaDB + MySQL + Redis BGSAVE, tar named volumes, restic backup, forget
   --init     restic init (once per repository)
   --list     restic snapshots
 
@@ -116,16 +117,27 @@ dump_logical() {
   mkdir -p "$dump_dir"
 
   local wiki_db wiki_user wiki_pass redis_pass
+  local blog_db blog_user blog_pass
   wiki_db="$(env_get WIKI_DB_NAME)"
   wiki_user="$(env_get WIKI_DB_USER)"
   wiki_pass="$(env_get WIKI_DB_PASSWORD)"
   redis_pass="$(env_get FORUM_REDIS_PASSWORD)"
+  blog_db="$(env_get BLOG_DB_NAME)"
+  blog_user="$(env_get BLOG_DB_USER)"
+  blog_pass="$(env_get BLOG_DB_PASSWORD)"
 
   echo "→ MariaDB dump (wiki-db)"
   "${COMPOSE[@]}" exec -T wiki-db \
     mariadb-dump --single-transaction --routines --triggers \
     -u"$wiki_user" -p"$wiki_pass" "$wiki_db" \
     >"$dump_dir/wiki-mariadb.sql"
+
+  # App user has no PROCESS privilege; skip tablespaces. Logical dump is the restore source.
+  echo "→ MySQL dump (blog-db)"
+  "${COMPOSE[@]}" exec -T blog-db \
+    mysqldump --single-transaction --no-tablespaces --routines --triggers \
+    -u"$blog_user" -p"$blog_pass" "$blog_db" \
+    >"$dump_dir/blog-mysql.sql"
 
   echo "→ Redis BGSAVE (forum-redis)"
   "${COMPOSE[@]}" exec -T forum-redis \
@@ -153,6 +165,9 @@ run_backup() {
   tar_volume wiki_config "${vols}/wiki_config.tar.gz"
   # Logical dump is the restore source for MariaDB; still snapshot data dir for forensics.
   tar_volume wiki_db_data "${vols}/wiki_db_data.tar.gz"
+  tar_volume blog_content "${vols}/blog_content.tar.gz"
+  # Logical dump is the restore source for MySQL; still snapshot data dir for forensics.
+  tar_volume blog_db_data "${vols}/blog_db_data.tar.gz"
   tar_volume caddy_data "${vols}/caddy_data.tar.gz"
   tar_volume caddy_config "${vols}/caddy_config.tar.gz"
 
